@@ -155,13 +155,21 @@ static ngx_command_t  ngx_core_commands[] = {
       ngx_null_command
 };
 
-
+/* 
+ * core模块配置文件上下文
+ * ngx_core_module_create_conf core模块创建配置文件
+ * ngx_core_module_init_conf core模块初始化配置文件
+ */
 static ngx_core_module_t  ngx_core_module_ctx = {
     ngx_string("core"),
     ngx_core_module_create_conf,
     ngx_core_module_init_conf
 };
 
+/* 
+ * core模块
+ *
+ */
 
 ngx_module_t  ngx_core_module = {
     NGX_MODULE_V1,
@@ -284,6 +292,7 @@ main(int argc, char *const *argv)
         return 1;
     }
 
+    /* 模块编号初始化*/
     if (ngx_preinit_modules() != NGX_OK) {
         return 1;
     }

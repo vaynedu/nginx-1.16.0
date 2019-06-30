@@ -218,12 +218,27 @@
 
 #define NGX_MODULE_V1_PADDING  0, 0, 0, 0, 0, 0, 0, 0
 
+/*
+ * 结构体ngx_module_s主要用于管理每一个模块的详细信息
+ *
+ * Nginx的所有模块会放置在全局变量cycle的cycle->modules 模块数组。通过这个数组，我们就可以拿到每个模块的具体信息
+ *
+ */
+
+
+
 
 struct ngx_module_s {
     ngx_uint_t            ctx_index;
-    ngx_uint_t            index;
+    /* 模块的唯一标识符号 没搞懂vaynedu
+     * cycle->conf_ctx主要存储的是各个模块的配置文件结构的指针地址
+     * cycle->conf_ctx中获取各个模块配置信息都是通过模块的标识来确定数组位置的
+     * ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
+     */ 
 
-    char                 *name;
+    ngx_uint_t            index; 
+
+    char                 *name; /* 模块名称 */
 
     ngx_uint_t            spare0;
     ngx_uint_t            spare1;
@@ -231,9 +246,9 @@ struct ngx_module_s {
     ngx_uint_t            version;
     const char           *signature;
 
-    void                 *ctx;
-    ngx_command_t        *commands;
-    ngx_uint_t            type;
+    void                 *ctx; /* 模块上下文, 没搞懂vaynedu */
+    ngx_command_t        *commands; /*模块的命令集 */
+    ngx_uint_t            type; /* 模块类型，比如是http模块还是core模块还是event模块等*/
 
     ngx_int_t           (*init_master)(ngx_log_t *log);
 
@@ -257,6 +272,11 @@ struct ngx_module_s {
 };
 
 
+/*
+ * 核心模块core数据结构
+ * ngx_core_module_t 为核心模块的上下文结构。主要用于核心模块的配置文件创建
+ */
+
 typedef struct {
     ngx_str_t             name;
     void               *(*create_conf)(ngx_cycle_t *cycle);
@@ -274,6 +294,12 @@ ngx_int_t ngx_add_module(ngx_conf_t *cf, ngx_str_t *file,
     ngx_module_t *module, char **order);
 
 
+/* 
+ * 模块数组，所有的模块都会保存在此数组中
+ * 四种类型模块：core、conf、event、http
+ *
+ * 具体的模块可通过编译前的configure命令进行配置
+ */
 extern ngx_module_t  *ngx_modules[];
 extern ngx_uint_t     ngx_max_module;
 

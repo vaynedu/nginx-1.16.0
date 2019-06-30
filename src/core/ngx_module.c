@@ -21,6 +21,10 @@ static ngx_uint_t ngx_module_ctx_index(ngx_cycle_t *cycle, ngx_uint_t type,
 ngx_uint_t         ngx_max_module;
 static ngx_uint_t  ngx_modules_n;
 
+/*
+ * 初始化所有模块，并对所有模块进行编号处理
+ *
+ */
 
 ngx_int_t
 ngx_preinit_modules(void)
@@ -38,6 +42,10 @@ ngx_preinit_modules(void)
     return NGX_OK;
 }
 
+/* 创建模块以及创建模块的配置信息
+ * ngx_init_cycle 在初始化cycle的时候，初始化模块创建一个列表
+ * 并且将静态的模块拷贝在列表上
+ */
 
 ngx_int_t
 ngx_cycle_modules(ngx_cycle_t *cycle)
@@ -62,6 +70,10 @@ ngx_cycle_modules(ngx_cycle_t *cycle)
 }
 
 
+/* 
+ * ngx_init_modules主要用于每个模块的初始化工作
+ * ngx_module_s结构中定义了init_module的模块初始化回调函数
+ */
 ngx_int_t
 ngx_init_modules(ngx_cycle_t *cycle)
 {

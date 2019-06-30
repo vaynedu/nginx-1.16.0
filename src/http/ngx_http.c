@@ -79,6 +79,31 @@ ngx_str_t  ngx_http_html_default_types[] = {
     ngx_null_string
 };
 
+/* 
+ * ngx_core_module_t ngx_command_t ngx_module_t调用关系
+ *
+ * ngx_module_t --- ngx_http_module 包含
+ *
+ *      
+ *       1. ngx_command_t：a) 命令集，包括配置项的名称、类型、回调函数等
+ *                         b) 我的理解就是描述命令行         
+ *       
+ *       2. ngx_core_module_t(核心模块的ctx指向的数据结构)
+ *
+ *
+ *    这里等待补充（关键字vaynedu）
+ */
+
+
+/**
+ * HTTP模块命令集
+ * HTTP模块也是一个大模块，最外层为：
+ * http {
+ *  ....
+ * }
+ * ngx_http_block:该方法就是回调函数
+ * HTTP核心模块
+ */
 
 static ngx_command_t  ngx_http_commands[] = {
 
@@ -93,12 +118,24 @@ static ngx_command_t  ngx_http_commands[] = {
 };
 
 
+/*
+ * HTTP核心模块上下文
+ *
+ */
+
 static ngx_core_module_t  ngx_http_module_ctx = {
     ngx_string("http"),
     NULL,
     NULL
 };
 
+
+/* 
+ * HTTP核心模块 结构
+ * 模块类型 NGX_CORE_MODULE
+ * 通过调用ngx_http_block方法，解析{}中的HTTP模块配置
+ *
+ */
 
 ngx_module_t  ngx_http_module = {
     NGX_MODULE_V1,
@@ -116,7 +153,7 @@ ngx_module_t  ngx_http_module = {
 };
 
 /* http模块初始化入口，http阶段的初始化入口
- *
+ * HTTP模块的总入口就是这个http{}命令集的回调函数:ngx_http_block
  * ngx_http_commands 命令集的回调函数
  *
  */
@@ -227,7 +264,11 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         }
 
         module = cf->cycle->modules[m]->ctx;
-
+         
+        /* 
+         * preconfiguration 预先初始化配置信息
+         *
+         */ 
         if (module->preconfiguration) {
             if (module->preconfiguration(cf) != NGX_OK) {
                 return NGX_CONF_ERROR;
@@ -331,7 +372,7 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     /* ngx_http_init_phase_handlers 非常重要，完成cheker和handler方法赋值
      * 这里决定HTTP到底执行多少个模块，初始化一个顺序
-     * */
+     */
     if (ngx_http_init_phase_handlers(cf, cmcf) != NGX_OK) {
         return NGX_CONF_ERROR;
     }

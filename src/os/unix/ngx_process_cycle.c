@@ -926,6 +926,10 @@ ngx_worker_process_init(ngx_cycle_t *cycle, ngx_int_t worker)
         ls[i].previous = NULL;
     }
 
+    /* 
+     * 模块进程初始化，主要回调模块数据结构中的init_process回调函数
+     */ 
+
     for (i = 0; cycle->modules[i]; i++) {
         if (cycle->modules[i]->init_process) {
             if (cycle->modules[i]->init_process(cycle) == NGX_ERROR) {
