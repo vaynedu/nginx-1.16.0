@@ -1,5 +1,5 @@
 #export LANG=en_US.UTF-8
-
+commit.sh
 tags
 cscope.in.out
 cscope.out
