@@ -843,6 +843,7 @@ ngx_http_handler(ngx_http_request_t *r)
 
 /*
  * ngx_http_core_run_phases特别重要的一个函数.HTTP框架11个阶段的入口
+ * nginx在接收并解析完请求行，请求头之后，就会依次调用各个phase handler.
  * nginx将控制权交给HTTP模块，一旦某个HTTP阶段返回NGX_OK，nginx将重新拿回控制权
  */
 
@@ -926,6 +927,11 @@ ngx_http_core_generic_phase(ngx_http_request_t *r, ngx_http_phase_handler_t *ph)
 }
 
 
+/* ngx_http_core_rewrite_phase是HTTP第2个阶段 NGX_HTTP_SERVER_REWRITE_PHASE 的checker函数
+ * 默认的handler是ngx_http_rewrite_handler
+ * NGX_HTTP_SERVER_REWRITE_PHASE阶段: server级别的uri重写阶段，也就是该阶段执行处于server块内，location块外的重写指令
+ */
+
 ngx_int_t
 ngx_http_core_rewrite_phase(ngx_http_request_t *r, ngx_http_phase_handler_t *ph)
 {
@@ -934,6 +940,7 @@ ngx_http_core_rewrite_phase(ngx_http_request_t *r, ngx_http_phase_handler_t *ph)
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "rewrite phase: %ui", r->phase_handler);
 
+    /*ngx_http_rewrite_handler*/
     rc = ph->handler(r);
 
     if (rc == NGX_DECLINED) {
