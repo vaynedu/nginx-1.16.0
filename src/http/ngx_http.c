@@ -115,6 +115,11 @@ ngx_module_t  ngx_http_module = {
     NGX_MODULE_V1_PADDING
 };
 
+/* http模块初始化入口，http阶段的初始化入口
+ *
+ * ngx_http_commands 命令集的回调函数
+ *
+ */
 
 static char *
 ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
@@ -287,8 +292,10 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         }
     }
 
-
-    if (ngx_http_init_phases(cf, cmcf) != NGX_OK) {
+    /* 初始化http phase的handler，目前只有7个阶段，因为4个阶段不支持自定义handler
+     * checker和handler在ngx_http_init_phase_handlers函数中赋值
+     */
+   if (ngx_http_init_phases(cf, cmcf) != NGX_OK) {
         return NGX_CONF_ERROR;
     }
 
@@ -322,7 +329,9 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     *cf = pcf;
 
-
+    /* ngx_http_init_phase_handlers 非常重要，完成cheker和handler方法赋值
+     * 这里决定HTTP到底执行多少个模块，初始化一个顺序
+     * */
     if (ngx_http_init_phase_handlers(cf, cmcf) != NGX_OK) {
         return NGX_CONF_ERROR;
     }
