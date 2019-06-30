@@ -841,6 +841,10 @@ ngx_http_handler(ngx_http_request_t *r)
     ngx_http_core_run_phases(r);
 }
 
+/*
+ * ngx_http_core_run_phases特别重要的一个函数.HTTP框架11个阶段的入口
+ * nginx将控制权交给HTTP模块，一旦某个HTTP阶段返回NGX_OK，nginx将重新拿回控制权
+ */
 
 void
 ngx_http_core_run_phases(ngx_http_request_t *r)
@@ -853,6 +857,10 @@ ngx_http_core_run_phases(ngx_http_request_t *r)
 
     ph = cmcf->phase_engine.handlers;
 
+    // 一个HTTP处理阶段中的checker检查方法，仅可以由HTTP框架实现，以此控制HTTP请求的处理流程
+    /* nginx的http 11阶段中有handler方法了，为什么还有checker方法？
+       checker方法是handler方法的封装，只有存在并且调用checker方法才会执行handler方法，checker方法中可以执行多个handler方式，因为同一个http阶段，可能会存在多个http模块。checker方法中统一处理handler的返回值，checker方法的返回值（NGX_OK、NGX_DONE、NGX_ERROR等）来决定http框架后续的行为（继续执行下一个http模块，执行下一个http阶段，下次再执行这个http模块等等）
+    */
     while (ph[r->phase_handler].checker) {
 
         rc = ph[r->phase_handler].checker(r, &ph[r->phase_handler]);
@@ -863,7 +871,12 @@ ngx_http_core_run_phases(ngx_http_request_t *r)
     }
 }
 
-
+/*
+ * ngx_http_core_generic_phase 通用的checker函数，它是3个http phase的checker函数
+ * NGX_HTTP_POST_READ_PHASE
+ * NGX_HTTP_PREACCESS_PHASE
+ * NGX_HTTP_LOG_PHASE
+ */
 ngx_int_t
 ngx_http_core_generic_phase(ngx_http_request_t *r, ngx_http_phase_handler_t *ph)
 {
@@ -877,24 +890,36 @@ ngx_http_core_generic_phase(ngx_http_request_t *r, ngx_http_phase_handler_t *ph)
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "generic phase: %ui", r->phase_handler);
 
+    /* ngx_http_core_generic_phase的handler函数自己一直不知道在哪里赋值的？？ 待以后搞明白
+     * 网上查阅资料，这个phase一般没有handler函数
+     *
+     * 特殊情况下会存在三个， 也没有找到赋值的地方
+     * ngx_http_l7waf_handler
+     * ngx_http_limit_req_handler
+     * ngx_http_limit_conn_handler
+     */
     rc = ph->handler(r);
 
+    // 返回值是NGX_OK，说明这个phase执行完了，跳到下一个phase的第一个handler去
     if (rc == NGX_OK) {
         r->phase_handler = ph->next;
         return NGX_AGAIN;
     }
 
+     // 返回值NGX_DECLINED，继续执行这个phase的下一个handler
     if (rc == NGX_DECLINED) {
         r->phase_handler++;
         return NGX_AGAIN;
     }
 
+    //当前阶段我还没有处理完成，下次我还要继续在这个阶段处理
+    //目前返回NGX_OK，将控制权交给nginx
     if (rc == NGX_AGAIN || rc == NGX_DONE) {
         return NGX_OK;
     }
 
     /* rc == NGX_ERROR || rc == NGX_HTTP_...  */
-
+    /* 返回错误，结束请求，释放相应的资源 */
     ngx_http_finalize_request(r, rc);
 
     return NGX_OK;
