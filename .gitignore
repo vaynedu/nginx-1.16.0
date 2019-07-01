@@ -4,3 +4,5 @@ tags
 cscope.in.out
 cscope.out
 cscope.po.out
+Makefile
+objs/*
