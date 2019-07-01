@@ -6,3 +6,5 @@ cscope.out
 cscope.po.out
 Makefile
 objs/*
+
+thirdpartylib/echo-nginx-module-0.61
