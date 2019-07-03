@@ -107,6 +107,21 @@ static ngx_int_t ngx_http_myhello_handler(ngx_http_request_t *r)
 	r->headers_out.status = NGX_HTTP_OK;
 	r->headers_out.content_length_n = response.len;
 	r->headers_out.content_type = type;
+
+   
+        /* 发送自定义头部 */
+        ngx_table_elt_t *h = ngx_list_push(&r->headers_out.headers);
+        if(h == NULL)
+        {
+            return NGX_ERROR;
+        }
+
+        h->hash = 1;
+        h->key.len = sizeof("name") - 1;
+        h->key.data = (u_char *)"name";
+        h->value.len = sizeof("vaynedu") - 1;
+        h->value.data = (u_char *)"vaynedu";
+ 
 	
 	/* 发送HTTP头部 */
 	rc = ngx_http_send_header(r);
