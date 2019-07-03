@@ -1,4 +1,5 @@
 #export LANG=en_US.UTF-8
+#date +"%F %T"
 commit.sh
 tags
 cscope.in.out
@@ -7,4 +8,5 @@ cscope.po.out
 Makefile
 objs/*
 
-thirdpartylib/echo-nginx-module-0.61
+
+thirdpartylib/tmp/*
