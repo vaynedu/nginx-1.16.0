@@ -226,9 +226,12 @@
  */
 
 
-
-
 struct ngx_module_s {
+    /* 模块分类标识
+     * 
+     * core 、http、event、mail
+     */
+
     ngx_uint_t            ctx_index;
     /* 模块的唯一标识符号 没搞懂vaynedu
      * cycle->conf_ctx主要存储的是各个模块的配置文件结构的指针地址
@@ -245,7 +248,11 @@ struct ngx_module_s {
 
     ngx_uint_t            version;
     const char           *signature;
-
+    /* 1. 结构体中，指向模块上下文结构的指针类型为void，说明不同模块的模块上下文
+     * 结构不同。
+     * 2. 具体可以参考下ngx_http_module_t
+     *    结构体中的所有成员都是函数指针。这些函数在HTTP类模块初始化过程的不同阶段调用
+     */  
     void                 *ctx; /* 模块上下文, 没搞懂vaynedu */
     ngx_command_t        *commands; /*模块的命令集 */
     ngx_uint_t            type; /* 模块类型，比如是http模块还是core模块还是event模块等*/

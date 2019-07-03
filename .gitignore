@@ -1,5 +1,6 @@
 #export LANG=en_US.UTF-8
 #date +"%F %T"
+#set nocscopeverbose
 commit.sh
 tags
 cscope.in.out

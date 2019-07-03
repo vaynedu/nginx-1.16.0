@@ -9,8 +9,10 @@
 #define _NGINX_H_INCLUDED_
 
 
-#define nginx_version      1016001
-#define NGINX_VERSION      "1.16.01 echo_module_test"
+#define nginx_version      1016000
+
+// 在这里可以随便修改，具体显示 ./nginx -v
+#define NGINX_VERSION      "1.16.0"
 #define NGINX_VER          "nginx/" NGINX_VERSION 
 
 #ifdef NGX_BUILD

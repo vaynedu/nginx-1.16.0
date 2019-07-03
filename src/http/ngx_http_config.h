@@ -14,24 +14,68 @@
 #include <ngx_http.h>
 
 
+/*
+ * nginx如何存储配置信息？
+ *  通过三个指针数组
+ */
+
 typedef struct {
+   /* 指针数组，数组中的每个元素指向所有HTTP模块create_main_conf方法产生的结构体*/
     void        **main_conf;
+   /* 指针数组，数组中的每个元素指向所有HTTP模块create_srv_conf方法产生的结构体*/
     void        **srv_conf;
+   /* 指针数组，数组中的每个元素指向所有HTTP模块create_loc_conf方法产生的结构体*/
     void        **loc_conf;
 } ngx_http_conf_ctx_t;
 
 
+/* 
+ * 什么时候调用ngx_http_module_t? 怎么理解此module?
+ * vaynedu标识没有搞懂
+ * */
+
 typedef struct {
+
+    /* 解析配置文件之前调用 */
     ngx_int_t   (*preconfiguration)(ngx_conf_t *cf);
+    
+    /* 完成配置文件之后调用 */
     ngx_int_t   (*postconfiguration)(ngx_conf_t *cf);
 
+    /* 当创建main级配置的时候调用 
+     *
+     *  http { 
+     *     ...
+     *     ...
+     *  }
+     * */
     void       *(*create_main_conf)(ngx_conf_t *cf);
+    
+    /* 初始化main级配置*/
     char       *(*init_main_conf)(ngx_conf_t *cf, void *conf);
 
+    /* 当创建server级别配置的时候调用 
+     *
+     *  server {
+     *     ...
+     *     ...
+     *  }
+     * */
     void       *(*create_srv_conf)(ngx_conf_t *cf);
+    
+    /* 合并main级别和server级别配置*/
     char       *(*merge_srv_conf)(ngx_conf_t *cf, void *prev, void *conf);
 
+    /*  当创建location级别配置的时候调用
+     *  
+     *  location{
+     *     ...
+     *     ...
+     *  }
+     * */
     void       *(*create_loc_conf)(ngx_conf_t *cf);
+    
+    /* 合并server级别和location级别配置项（包括子location） */
     char       *(*merge_loc_conf)(ngx_conf_t *cf, void *prev, void *conf);
 } ngx_http_module_t;
 
