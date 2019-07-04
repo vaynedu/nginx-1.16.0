@@ -85,6 +85,61 @@ ngx_module_t ngx_http_myhello_module = {
 	NGX_MODULE_V1_PADDING	
 };
 
+static ngx_int_t ngx_add_diy_header(ngx_http_request_t *r,  ngx_str_t *name,  ngx_str_t *value, int hash_value)
+{
+    if(r == NULL || name == NULL || value == NULL || hash_value == 0)
+    {
+        return NGX_ERROR;
+    }
+
+    ngx_table_elt_t *h = ngx_list_push(&r->headers_out.headers);
+    if( h == NULL)
+    {
+       return NGX_ERROR;
+    }  
+
+    h->hash = hash_value;
+    h->key.len = (*name).len;
+    h->key.data = name->data;
+    h->value.len = value->len;
+    h->value.data = value->data;
+
+   // name:mytime222, value:20190704080854, h->key.len : 7,  h->key.data:mytime222 ,h->value.len : 7, h->value.data :20190704080854
+    ngx_log_debug6(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                   "\nngx_add_diy_header:\n name:%s, value:%s, h->key.len:%d, h->key.data:%s ,h->value.len:%d, h->value.data:%s\n", name,value,h->key.len,h->key.data, h->value.len, h->value.data);
+
+
+    return NGX_OK;
+
+}
+
+static ngx_int_t ngx_add_c_diy_header(ngx_http_request_t *r,  const u_char *name,  int name_len,  const u_char *value, int value_len, int hash_value)
+{
+   if(r == NULL || name == NULL || name_len == 0 ||  
+                  value == NULL || value_len == 0 || hash_value == 0)
+   {
+        return NGX_ERROR;
+   }
+   
+   ngx_table_elt_t *h = ngx_list_push(&r->headers_out.headers);
+   if(h == NULL)
+   {
+     return NGX_ERROR;
+   }
+
+   h->hash = hash_value;
+   h->key.len = name_len;
+   h->key.data = (u_char *)name;
+   h->value.len = value_len;
+   h->value.data = (u_char *)value;   
+
+    ngx_log_debug6(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,"\nngx_add_c_diy_header:\n name:%s, value:%s, h->key.len:%d, h->key.data:%s ,h->value.len:%d, h->value.data:%s\n", name,value,h->key.len,h->key.data, h->value.len, h->value.data);
+
+   return NGX_OK;
+}
+
+
+
 static ngx_int_t ngx_http_myhello_handler(ngx_http_request_t *r)
 {
 	/* 判断请求方法是否为GET或者HEAD，否则返回405 Not Allowed */
@@ -109,7 +164,11 @@ static ngx_int_t ngx_http_myhello_handler(ngx_http_request_t *r)
 	r->headers_out.content_type = type;
 
    
-        /* 发送自定义头部 */
+        /* 发送自定义头部 
+         *   ngx_http_headers_out_t
+         *
+         * 
+         * */
         ngx_table_elt_t *h = ngx_list_push(&r->headers_out.headers);
         if(h == NULL)
         {
@@ -121,7 +180,31 @@ static ngx_int_t ngx_http_myhello_handler(ngx_http_request_t *r)
         h->key.data = (u_char *)"name";
         h->value.len = sizeof("vaynedu") - 1;
         h->value.data = (u_char *)"vaynedu";
- 
+
+
+       
+        ngx_str_t module_name = ngx_string("module");
+        ngx_str_t module_value = ngx_string("ngx_http_myhello_module");
+        h = ngx_list_push(&r->headers_out.headers);
+        if( h == NULL)
+        {
+            return NGX_ERROR;
+        }
+
+        h->hash = 2;
+        h->key.len = module_name.len;
+        h->key.data = module_name.data;
+        h->value.len = module_value.len;
+        h->value.data = module_value.data;
+        
+
+        ngx_str_t header_name  = ngx_string("today");
+        ngx_str_t header_value = ngx_string("2019-07-04 08:08:54");
+        ngx_add_diy_header(r, &header_name, &header_value, 3); 
+
+        ngx_add_c_diy_header(r, (const u_char *)"tomorror", sizeof("tomorror")-1, (const u_char *)"2019-07-05 08:08:08", sizeof("2019-07-05 08:08:08")-1, 3);
+        ngx_add_c_diy_header(r, (const u_char *)"module", sizeof("module")-1, (const u_char *)"ngx_http_myhello_module", sizeof("ngx_http_myhello_module")-1, 3);
+
 	
 	/* 发送HTTP头部 */
 	rc = ngx_http_send_header(r);
