@@ -3,6 +3,7 @@
 #include <ngx_config.h>
 
 
+
 static char *ngx_http_myhello(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 static ngx_int_t ngx_http_myhello_handler(ngx_http_request_t *r);
 
@@ -28,11 +29,13 @@ static ngx_command_t ngx_http_myhello_commands[] = {
 
 /* 
  * myhello指令的回调函数，主要用来赋值handler
+ *
+ * 这到底是哪个阶段的
  */
 static char *ngx_http_myhello(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
 	ngx_http_core_loc_conf_t *clcf;
-    clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);	
+        clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);	
 	
 	clcf->handler = ngx_http_myhello_handler;
 	
@@ -85,9 +88,9 @@ ngx_module_t ngx_http_myhello_module = {
 	NGX_MODULE_V1_PADDING	
 };
 
-static ngx_int_t ngx_add_diy_header(ngx_http_request_t *r,  ngx_str_t *name,  ngx_str_t *value, int hash_value)
+static ngx_int_t ngx_add_diy_header(ngx_http_request_t *r,  ngx_str_t *name,  ngx_str_t *value)
 {
-    if(r == NULL || name == NULL || value == NULL || hash_value == 0)
+    if(r == NULL || name == NULL || value == NULL)
     {
         return NGX_ERROR;
     }
@@ -96,27 +99,42 @@ static ngx_int_t ngx_add_diy_header(ngx_http_request_t *r,  ngx_str_t *name,  ng
     if( h == NULL)
     {
        return NGX_ERROR;
-    }  
+    } 
 
-    h->hash = hash_value;
+   ngx_uint_t hash = 0;
+   ngx_uint_t  i = 0;
+   u_char ch;  
+   for(i = 0; i < name->len;  i++)
+   { 
+     ch = name->data[i];
+     /* #define ngx_hash(key, c)   ((ngx_uint_t) key * 31 + c) */
+     hash = ngx_hash(hash, ch);
+   } 
+   for(i = 0; i < value->len; i++)
+   { 
+     ch = value->data[i];
+     hash = ngx_hash(hash, ch);
+   }
+
+
+    h->hash = hash;
     h->key.len = (*name).len;
     h->key.data = name->data;
     h->value.len = value->len;
     h->value.data = value->data;
-
-   // name:mytime222, value:20190704080854, h->key.len : 7,  h->key.data:mytime222 ,h->value.len : 7, h->value.data :20190704080854
-    ngx_log_debug6(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                   "\nngx_add_diy_header:\n name:%s, value:%s, h->key.len:%d, h->key.data:%s ,h->value.len:%d, h->value.data:%s\n", name,value,h->key.len,h->key.data, h->value.len, h->value.data);
+  
+    // nginx 打印无符号整型和C语言不一样，这里得整理一下
+    ngx_log_debug7(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,"\nngx_add_diy_header:\n name:%s, value:%s, h->key.len:%d, h->key.data:%s ,h->value.len:%d, h->value.data:%s , h->hash:%ui \n", name->data,value->data,h->key.len,h->key.data, h->value.len, h->value.data,h->hash);
 
 
     return NGX_OK;
 
 }
 
-static ngx_int_t ngx_add_c_diy_header(ngx_http_request_t *r,  const u_char *name,  int name_len,  const u_char *value, int value_len, int hash_value)
+static ngx_int_t ngx_add_c_diy_header(ngx_http_request_t *r,  const u_char *name,  int name_len,  const u_char *value, int value_len)
 {
    if(r == NULL || name == NULL || name_len == 0 ||  
-                  value == NULL || value_len == 0 || hash_value == 0)
+                  value == NULL || value_len == 0)
    {
         return NGX_ERROR;
    }
@@ -127,13 +145,28 @@ static ngx_int_t ngx_add_c_diy_header(ngx_http_request_t *r,  const u_char *name
      return NGX_ERROR;
    }
 
-   h->hash = hash_value;
+   ngx_uint_t hash = 0;
+   ngx_int_t  i = 0;
+   u_char ch;
+   for(i = 0; i < name_len;  i++)
+   {
+     ch = name[i];
+     /* #define ngx_hash(key, c)   ((ngx_uint_t) key * 31 + c) */
+     hash = ngx_hash(hash, ch);
+   }
+   for(i = 0; i < value_len; i++)
+   {
+     ch = value[i];
+     hash = ngx_hash(hash, ch);
+   }
+
+   h->hash = hash;
    h->key.len = name_len;
    h->key.data = (u_char *)name;
    h->value.len = value_len;
    h->value.data = (u_char *)value;   
 
-    ngx_log_debug6(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,"\nngx_add_c_diy_header:\n name:%s, value:%s, h->key.len:%d, h->key.data:%s ,h->value.len:%d, h->value.data:%s\n", name,value,h->key.len,h->key.data, h->value.len, h->value.data);
+   ngx_log_debug7(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,"\nngx_add_c_diy_header:\n name:%s, value:%s, h->key.len:%d, h->key.data:%s ,h->value.len:%d, h->value.data:%s, h->hash:%ui\n", name,value,h->key.len,h->key.data, h->value.len, h->value.data, h->hash);
 
    return NGX_OK;
 }
@@ -200,10 +233,10 @@ static ngx_int_t ngx_http_myhello_handler(ngx_http_request_t *r)
 
         ngx_str_t header_name  = ngx_string("today");
         ngx_str_t header_value = ngx_string("2019-07-04 08:08:54");
-        ngx_add_diy_header(r, &header_name, &header_value, 3); 
+        ngx_add_diy_header(r, &header_name, &header_value); 
 
-        ngx_add_c_diy_header(r, (const u_char *)"tomorror", sizeof("tomorror")-1, (const u_char *)"2019-07-05 08:08:08", sizeof("2019-07-05 08:08:08")-1, 3);
-        ngx_add_c_diy_header(r, (const u_char *)"module", sizeof("module")-1, (const u_char *)"ngx_http_myhello_module", sizeof("ngx_http_myhello_module")-1, 3);
+        ngx_add_c_diy_header(r, (const u_char *)"tomorror", sizeof("tomorror")-1, (const u_char *)"2019-07-05 08:08:08", sizeof("2019-07-05 08:08:08")-1);
+        ngx_add_c_diy_header(r, (const u_char *)"X-Cache-Status", sizeof("X-Cache-Status")-1, (const u_char *)"cluster_hit", sizeof("cluster_hit")-1);
 
 	
 	/* 发送HTTP头部 */

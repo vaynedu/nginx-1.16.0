@@ -89,11 +89,32 @@ typedef struct {
 } ngx_hash_keys_arrays_t;
 
 
+/*
+ * ngx_table_elt_t 主要用来存储HTTP的header头部
+ *
+ *  比如该头部： Content-Type: text/plain
+ *  按照下列方式存储
+ *  key ： Content-Type 
+ *  value ： text/plain
+ *  
+ *
+ * */
+
 typedef struct {
-    ngx_uint_t        hash;
+    /*  hash用于快速检索头部，这个还在熟悉，查询资料hash这个还是重点:
+     *  h->hash = r->header_hash;
+     *  hash赋值在ngx_http_parse_header_line函数中，根据请求的头部key\value整个计算hash
+     *   
+     *  #define ngx_hash(key, c)   ((ngx_uint_t) key * 31 + c) 
+     *
+     *  hash这个还在熟悉，查询资料hash这个还是重点: 
+     *
+     */  
+    ngx_uint_t        hash; 
     ngx_str_t         key;
     ngx_str_t         value;
-    u_char           *lowcase_key;
+    /*存放的是本结构体中key的小写字母字符串, 可以理解为忽略大小写来处理*/
+    u_char           *lowcase_key; 
 } ngx_table_elt_t;
 
 
