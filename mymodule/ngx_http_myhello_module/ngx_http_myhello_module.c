@@ -123,7 +123,25 @@ static ngx_int_t ngx_add_diy_header(ngx_http_request_t *r,  ngx_str_t *name,  ng
     h->value.len = value->len;
     h->value.data = value->data;
   
-    // nginx 打印无符号整型和C语言不一样，这里得整理一下
+    /*
+     * nginx 打印无符号整型和C语言不一样，这里有自定义的格式
+     *
+     * src/core/ngx_string.c
+     *
+     * %O — off_t
+     * %T — time_t
+     * %z — ssize_t
+     * %i — ngx_int_t
+     * %p — void *
+     * %V — ngx_str_t *
+     * %s — u_char * (null-terminated)
+     * %*s — size_t + u_char *
+     *
+     * 大多数类型上加上前缀来使它们无符号。 要将输出转换为十六进制，请使用X或x
+     * 
+     *
+     *
+     */
     ngx_log_debug7(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,"\nngx_add_diy_header:\n name:%s, value:%s, h->key.len:%d, h->key.data:%s ,h->value.len:%d, h->value.data:%s , h->hash:%ui \n", name->data,value->data,h->key.len,h->key.data, h->value.len, h->value.data,h->hash);
 
 
