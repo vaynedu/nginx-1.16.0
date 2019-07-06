@@ -10,4 +10,4 @@ Makefile
 objs/*
 
 
-thirdpartylib/tmp/*
+third-module/tmp/*
