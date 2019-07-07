@@ -9,6 +9,7 @@
 #include <ngx_core.h>
 
 
+/* 基本hash 的查找*/
 void *
 ngx_hash_find(ngx_hash_t *hash, ngx_uint_t key, u_char *name, size_t len)
 {
@@ -30,6 +31,7 @@ ngx_hash_find(ngx_hash_t *hash, ngx_uint_t key, u_char *name, size_t len)
             goto next;
         }
 
+        // ngx_strncmp 这个使用一个函数多好的
         for (i = 0; i < len; i++) {
             if (name[i] != elt->name[i]) {
                 goto next;
@@ -39,7 +41,8 @@ ngx_hash_find(ngx_hash_t *hash, ngx_uint_t key, u_char *name, size_t len)
         return elt->value;
 
     next:
-
+        
+        // 这里的地址偏移到下一个ngx_hash_elt_t结构
         elt = (ngx_hash_elt_t *) ngx_align_ptr(&elt->name[0] + elt->len,
                                                sizeof(void *));
         continue;
@@ -461,6 +464,12 @@ found:
 }
 
 
+/* 支持通配符哈希表*/
+
+/* 
+ * ngx_hash_wildcard_init其实构造了一个多级hash表
+ *
+ */
 ngx_int_t
 ngx_hash_wildcard_init(ngx_hash_init_t *hinit, ngx_hash_key_t *names,
     ngx_uint_t nelts)
@@ -588,6 +597,15 @@ ngx_hash_wildcard_init(ngx_hash_init_t *hinit, ngx_hash_key_t *names,
                 wdc->value = names[n].value;
             }
 
+            /*
+             *  巧妙代码标记 : wonderful_code
+             *  
+             *  使用了指针的低位携带额外信息，节省了内存
+             *
+             *  nginx的事件模块用指针最后一位来判断事件是否过期
+             *
+             */
+
             name->value = (void *) ((uintptr_t) wdc | (dot ? 3 : 2));
 
         } else if (dot) {
@@ -606,6 +624,12 @@ ngx_hash_wildcard_init(ngx_hash_init_t *hinit, ngx_hash_key_t *names,
 }
 
 
+/*
+ *  BKDR算法进行hash
+ *  发现一个很好的推理文章，还没有看
+ *  
+ *  https://blog.csdn.net/wanglx_/article/details/40400693
+ */
 ngx_uint_t
 ngx_hash_key(u_char *data, size_t len)
 {

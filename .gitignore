@@ -6,8 +6,16 @@ tags
 cscope.in.out
 cscope.out
 cscope.po.out
-Makefile
-objs/*
+#Makefile
 
+
+*.o
+objs/autoconf.err
+objs/nginx
+objs/ngx_auto_config.h
+objs/Makefile
+
+
+myexercise/a.out
 
 third-module/tmp/*

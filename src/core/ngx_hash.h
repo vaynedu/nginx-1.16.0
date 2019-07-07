@@ -13,27 +13,44 @@
 #include <ngx_core.h>
 
 
+/* 基本哈希表的元素 */
 typedef struct {
-    void             *value;
-    u_short           len;
-    u_char            name[1];
+    void             *value; //即为key-value中对应的value
+    u_short           len;   //为key-value中key的长度
+   /*
+    * name[1]为key的首地址
+    * 这里是非常重要的一个技巧，C语言的柔性数组(可变长数组)
+    * 可以申请一段连续的空间
+    */
+    u_char            name[1]; 
 } ngx_hash_elt_t;
 
 
+/* 基本哈希表结构 */
 typedef struct {
-    ngx_hash_elt_t  **buckets;
-    ngx_uint_t        size;
+    ngx_hash_elt_t  **buckets; //哈希表的首地址
+    ngx_uint_t        size; //哈希表中bucket的个数
 } ngx_hash_t;
 
 
+/* 支持通配符的哈希表结构 */
 typedef struct {
     ngx_hash_t        hash;
     void             *value;
 } ngx_hash_wildcard_t;
 
 
+/*
+ * 保存hash数据，键值对
+ *
+ * 一般将多个键-值对保存在ngx_hash_key_t结构的数组中
+ *
+ * vaynedu没有懂
+ *
+ * */
 typedef struct {
     ngx_str_t         key;
+    //由哈希函数根据key计算出的值. 将来此元素代表的结构体会被插入bucket[key_hash % size] 
     ngx_uint_t        key_hash;
     void             *value;
 } ngx_hash_key_t;
@@ -42,13 +59,15 @@ typedef struct {
 typedef ngx_uint_t (*ngx_hash_key_pt) (u_char *data, size_t len);
 
 
+/* 组合类型哈希表 */
 typedef struct {
     ngx_hash_t            hash;
-    ngx_hash_wildcard_t  *wc_head;
-    ngx_hash_wildcard_t  *wc_tail;
+    ngx_hash_wildcard_t  *wc_head; // 前置通配符的hash表 aa.bb.*
+    ngx_hash_wildcard_t  *wc_tail; // 后置通配符的hash表 *.com
 } ngx_hash_combined_t;
 
 
+/* 哈希表初始化使用的结构体*/
 typedef struct {
     ngx_hash_t       *hash;
     ngx_hash_key_pt   key;
@@ -78,13 +97,13 @@ typedef struct {
     ngx_pool_t       *pool;
     ngx_pool_t       *temp_pool;
 
-    ngx_array_t       keys;
+    ngx_array_t       keys; //存放所有完全匹配的key的数组
     ngx_array_t      *keys_hash;
 
-    ngx_array_t       dns_wc_head;
+    ngx_array_t       dns_wc_head; // 存放前置泛域名字符串，泛域名部分会被去掉
     ngx_array_t      *dns_wc_head_hash;
 
-    ngx_array_t       dns_wc_tail;
+    ngx_array_t       dns_wc_tail; // 存放后置泛域名字符串，泛域名部分会被去掉
     ngx_array_t      *dns_wc_tail_hash;
 } ngx_hash_keys_arrays_t;
 
