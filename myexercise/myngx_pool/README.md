@@ -15,15 +15,15 @@ myngx_pool.c --- [调试练习ngx_pool.c的代码](https://wait.com)<br>
 ## 二、遇到问题<br>
 ### 1. 编译出去-Werror=unused-variable<br>
 ```c
-myngx_pool.c: In function ‘main’:
-myngx_pool.c:33:17: error: unused variable ‘pool’ [-Werror=unused-variable]
-          ngx_pool_t *pool = NULL; 
+   a) myngx_pool.c: In function ‘main’:
+      myngx_pool.c:33:17: error: unused variable ‘pool’ [-Werror=unused-variable]
+            ngx_pool_t *pool = NULL; 
+ 
+      解决办法：gcc编译过程去掉-Werror参数就行
 
-解决办法：gcc编译过程去掉-Werror参数就行
-
-myngx_pool.c:46:9: warning: format ‘%x’ expects argument of type ‘unsigned int’, but argument 2 has type ‘struct ngx_log_t *’ [-Wformat=]
-printf("  .log = 0x%x\n", pool->log);
-解决办法：-Wformat=0
+   b) myngx_pool.c:46:9: warning: format ‘%x’ expects argument of type ‘unsigned int’, but argument 2 has type ‘struct ngx_log_t *’ [-Wformat=]
+      printf("  .log = 0x%x\n", pool->log);
+      解决办法：-Wformat=0
 ```
 <br>
 
@@ -39,8 +39,8 @@ printf("  .log = 0x%x\n", pool->log);
 
 ### 3. 如何产生一个core文件<br>
 ```Bash
-echo "/data/corefiles/core-%e-%p" >/proc/sys/kernel/core_pattern
-ulimit -c unlimited 
+   echo "/data/corefiles/core-%e-%p" >/proc/sys/kernel/core_pattern
+   ulimit -c unlimited 
 ```
 <br>
 
