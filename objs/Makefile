@@ -100,7 +100,7 @@ HTTP_INCS = -I src/http \
 	-I src/http/modules
 
 
-ADDON_DEPS = $(CORE_DEPS)                                                                           ./thirdpartylib/tmp/echo-nginx-module-0.61/src/ddebug.h                                                 ./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_module.h                                   ./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_handler.h                                  ./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_util.h                                     ./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_sleep.h                                    ./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_filter.h                                   ./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_var.h                                      ./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_location.h                                 ./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_echo.h                                     ./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_request_info.h                             ./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_subrequest.h                               ./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_foreach.h                                   $(HTTP_DEPS)
+ADDON_DEPS = $(CORE_DEPS)                                                                           ./third-module/tmp/echo-nginx-module-0.61/src/ddebug.h                                                 ./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_module.h                                   ./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_handler.h                                  ./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_util.h                                     ./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_sleep.h                                    ./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_filter.h                                   ./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_var.h                                      ./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_location.h                                 ./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_echo.h                                     ./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_request_info.h                             ./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_subrequest.h                               ./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_foreach.h                                   $(HTTP_DEPS)
 
 
 build:	binary modules manpage
@@ -1223,87 +1223,87 @@ objs/src/http/modules/ngx_http_upstream_zone_module.o:	$(CORE_DEPS) $(HTTP_DEPS)
 
 
 objs/addon/src/ngx_http_echo_module.o:	$(ADDON_DEPS) \
-	./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_module.c
+	./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_module.c
 	$(CC) -c $(CFLAGS)  $(ALL_INCS) \
 		-o objs/addon/src/ngx_http_echo_module.o \
-		./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_module.c
+		./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_module.c
 
 
 objs/addon/src/ngx_http_echo_util.o:	$(ADDON_DEPS) \
-	./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_util.c
+	./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_util.c
 	$(CC) -c $(CFLAGS)  $(ALL_INCS) \
 		-o objs/addon/src/ngx_http_echo_util.o \
-		./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_util.c
+		./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_util.c
 
 
 objs/addon/src/ngx_http_echo_timer.o:	$(ADDON_DEPS) \
-	./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_timer.c
+	./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_timer.c
 	$(CC) -c $(CFLAGS)  $(ALL_INCS) \
 		-o objs/addon/src/ngx_http_echo_timer.o \
-		./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_timer.c
+		./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_timer.c
 
 
 objs/addon/src/ngx_http_echo_var.o:	$(ADDON_DEPS) \
-	./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_var.c
+	./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_var.c
 	$(CC) -c $(CFLAGS)  $(ALL_INCS) \
 		-o objs/addon/src/ngx_http_echo_var.o \
-		./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_var.c
+		./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_var.c
 
 
 objs/addon/src/ngx_http_echo_handler.o:	$(ADDON_DEPS) \
-	./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_handler.c
+	./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_handler.c
 	$(CC) -c $(CFLAGS)  $(ALL_INCS) \
 		-o objs/addon/src/ngx_http_echo_handler.o \
-		./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_handler.c
+		./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_handler.c
 
 
 objs/addon/src/ngx_http_echo_filter.o:	$(ADDON_DEPS) \
-	./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_filter.c
+	./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_filter.c
 	$(CC) -c $(CFLAGS)  $(ALL_INCS) \
 		-o objs/addon/src/ngx_http_echo_filter.o \
-		./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_filter.c
+		./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_filter.c
 
 
 objs/addon/src/ngx_http_echo_sleep.o:	$(ADDON_DEPS) \
-	./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_sleep.c
+	./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_sleep.c
 	$(CC) -c $(CFLAGS)  $(ALL_INCS) \
 		-o objs/addon/src/ngx_http_echo_sleep.o \
-		./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_sleep.c
+		./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_sleep.c
 
 
 objs/addon/src/ngx_http_echo_location.o:	$(ADDON_DEPS) \
-	./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_location.c
+	./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_location.c
 	$(CC) -c $(CFLAGS)  $(ALL_INCS) \
 		-o objs/addon/src/ngx_http_echo_location.o \
-		./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_location.c
+		./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_location.c
 
 
 objs/addon/src/ngx_http_echo_echo.o:	$(ADDON_DEPS) \
-	./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_echo.c
+	./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_echo.c
 	$(CC) -c $(CFLAGS)  $(ALL_INCS) \
 		-o objs/addon/src/ngx_http_echo_echo.o \
-		./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_echo.c
+		./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_echo.c
 
 
 objs/addon/src/ngx_http_echo_request_info.o:	$(ADDON_DEPS) \
-	./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_request_info.c
+	./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_request_info.c
 	$(CC) -c $(CFLAGS)  $(ALL_INCS) \
 		-o objs/addon/src/ngx_http_echo_request_info.o \
-		./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_request_info.c
+		./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_request_info.c
 
 
 objs/addon/src/ngx_http_echo_subrequest.o:	$(ADDON_DEPS) \
-	./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_subrequest.c
+	./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_subrequest.c
 	$(CC) -c $(CFLAGS)  $(ALL_INCS) \
 		-o objs/addon/src/ngx_http_echo_subrequest.o \
-		./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_subrequest.c
+		./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_subrequest.c
 
 
 objs/addon/src/ngx_http_echo_foreach.o:	$(ADDON_DEPS) \
-	./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_foreach.c
+	./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_foreach.c
 	$(CC) -c $(CFLAGS)  $(ALL_INCS) \
 		-o objs/addon/src/ngx_http_echo_foreach.o \
-		./thirdpartylib/tmp/echo-nginx-module-0.61/src/ngx_http_echo_foreach.c
+		./third-module/tmp/echo-nginx-module-0.61/src/ngx_http_echo_foreach.c
 
 
 objs/addon/ngx_http_myhello_module/ngx_http_myhello_module.o:	$(ADDON_DEPS) \

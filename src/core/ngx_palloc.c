@@ -96,18 +96,28 @@ ngx_destroy_pool(ngx_pool_t *pool)
 }
 
 
+/*
+ * ngx_destroy_pool 和 ngx_reset_pool区别
+ *
+ * ngx_destroy_pool ：删除整个内存池
+ *
+ * ngx_reset_pool ：释放大块内存， 重新初始化ngx_pool_t内存池结构体，下次可以继续使用
+ *
+ * */
 void
 ngx_reset_pool(ngx_pool_t *pool)
 {
     ngx_pool_t        *p;
     ngx_pool_large_t  *l;
 
+    /* 释放大块内存 */
     for (l = pool->large; l; l = l->next) {
         if (l->alloc) {
             ngx_free(l->alloc);
         }
     }
 
+    /* 重新初始化ngx_pool_t内存池结构体，下次可以继续使用*/
     for (p = pool; p; p = p->d.next) {
         p->d.last = (u_char *) p + sizeof(ngx_pool_t);
         p->d.failed = 0;
@@ -119,6 +129,9 @@ ngx_reset_pool(ngx_pool_t *pool)
 }
 
 
+// 抽象出共同的代码部分， 不同的部分直接参数控制
+// 这样的代码看起来太舒服了
+// 一个字 爽
 void *
 ngx_palloc(ngx_pool_t *pool, size_t size)
 {
@@ -131,7 +144,7 @@ ngx_palloc(ngx_pool_t *pool, size_t size)
     return ngx_palloc_large(pool, size);
 }
 
-
+//ngx_palloc和ngx_palloc的区别是分片小块内存时是否需要内存对齐
 void *
 ngx_pnalloc(ngx_pool_t *pool, size_t size)
 {
@@ -153,6 +166,7 @@ ngx_palloc_small(ngx_pool_t *pool, size_t size, ngx_uint_t align)
 
     p = pool->current;
 
+    /* 遍历所有ngx_pool_t结构体来寻找一个 >= size空间的内存池 */
     do {
         m = p->d.last;
 
@@ -170,10 +184,14 @@ ngx_palloc_small(ngx_pool_t *pool, size_t size, ngx_uint_t align)
 
     } while (p);
 
+    /* 在现有内存池链表中，不能找到合适的ngx_pool_t分配内存，那么重新生成一个ngx_pool_t结构体，分配size内存*/
     return ngx_palloc_block(pool, size);
 }
 
-
+/*
+ * ngx_palloc_block函数 详见ngx_palloc_small注释
+ * 
+ * */
 static void *
 ngx_palloc_block(ngx_pool_t *pool, size_t size)
 {
@@ -307,7 +325,13 @@ ngx_pcalloc(ngx_pool_t *pool, size_t size)
     return p;
 }
 
-
+/*
+ * ngx_pool_cleanup_add从内存池中分配size空间大小
+ * 设置回调函数初始化
+ * 将该地址挂载到cleanup链表上
+ *
+ * ngx_pool_cleanup_t 至于使用场景还没有搞懂 unclear_code_flag
+ */
 ngx_pool_cleanup_t *
 ngx_pool_cleanup_add(ngx_pool_t *p, size_t size)
 {

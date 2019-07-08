@@ -1,9 +1,4 @@
-#define NGX_CONFIGURE " --prefix=/data4/nginx/nginx --add-module=./thirdpartylib/tmp/echo-nginx-module-0.61 --with-debug --add-module=./mymodule/ngx_http_myhello_module/"
-
-#ifndef NGX_DEBUG
-#define NGX_DEBUG  1
-#endif
-
+#define NGX_CONFIGURE " --prefix=/data4/nginx/nginx --add-module=./third-module/tmp/echo-nginx-module-0.61 --add-module=./mymodule/ngx_http_myhello_module/"
 
 #ifndef NGX_COMPILER
 #define NGX_COMPILER  "gcc 4.8.5 20150623 (Red Hat 4.8.5-4) (GCC) "
