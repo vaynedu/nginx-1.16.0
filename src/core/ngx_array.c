@@ -27,6 +27,16 @@ ngx_array_create(ngx_pool_t *p, ngx_uint_t n, size_t size)
 }
 
 
+/*
+ * ngx_array_destroy 销毁动态数组
+ *
+ * 销毁数组的操作实现如下，包括销毁数组数据区和数组头。销毁动作实际上就是修改内存池的 last 指针，
+ *
+ * 即数组的内存被内存池回收，并没有调用 free 等释放内存的操作。
+ *
+ * ngx_pool_t 解决了频繁申请和释放内存的过程， 提升性能
+ *
+ * */
 void
 ngx_array_destroy(ngx_array_t *a)
 {
@@ -43,7 +53,14 @@ ngx_array_destroy(ngx_array_t *a)
     }
 }
 
-
+/* 
+ * ngx_array_push 动态数组中添加一个元素
+ *
+ * 当前内存池如果可以添加，则在当前内存池申请
+ *
+ * 否则扩容内存池， 把就内存池的东西拷贝到新的内存池上，我觉得这里非常消耗性能
+ * 
+ * */
 void *
 ngx_array_push(ngx_array_t *a)
 {
@@ -91,6 +108,16 @@ ngx_array_push(ngx_array_t *a)
 }
 
 
+/*
+ *
+ * ngx_array_push 和 ngx_array_push_n区别
+ *
+ * 添加一个元素还是多个元素， 我觉得这里代码有冗余
+ *
+ * 之后再看 todo_code_flag
+ *
+ *
+ * */
 void *
 ngx_array_push_n(ngx_array_t *a, ngx_uint_t n)
 {
