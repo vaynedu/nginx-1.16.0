@@ -47,12 +47,18 @@ nginx-1.16.0源码分析及其注释--记录心路历程
 >> #### a) 《深入理解nginx》--陶辉
 >> #### b) 《深入剖析nginx》
 
+### 2. http
+>> #### a) 《图解HTTP》
+>> #### b) 《图解TCP/IP》
 
 
-## [六.tools -- 相关工具]
-### 1. ab
+
+## [六.tools -- 相关工具](https://github.com/lotluck/nginx-1.16.0/tree/master/tools)
+### 1. ab 压测工具
 >> #### yum install httpd-tools
->> #### ab -n 1000 -c 5 http://1.1.1.1/1.mp4
+>> #### 直接上手ab -n 1000 -c 5 http://1.1.1.1/1.mp4
+### 2. stress
+>> #### 待添加
 
 
 
