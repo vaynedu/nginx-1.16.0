@@ -42,7 +42,7 @@ nginx-1.16.0源码分析及其注释--记录心路历程
 >> ####  ./configure --prefix=/data4/nginx/nginx --add-module=./third-module/echo-nginx-module-0.61 && make -j8 && make install
 
 
-## [五.books -- 相关书籍 ]
+## [五.books -- 相关书籍](https://github.com/lotluck/nginx-1.16.0/tree/master/books)<br>
 ### 1. nginx
 >> #### a) 《深入理解nginx》--陶辉
 >> #### b) 《深入剖析nginx》
