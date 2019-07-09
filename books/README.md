@@ -1,7 +1,7 @@
 
 nginx-1.16.0
 ====
-books -- 相关书籍 
+books -- 相关书籍（文件详见books目录）
 ----
 
 ## 一、nginx<br>
