@@ -8,6 +8,17 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 
+/*
+ * 个人觉得nginx的list链表的方法很少
+ *
+ * 只有增加，没有修改和删除，也没有插入的方式（从前面插还是从后面插）
+ *
+ * 使用场景暂时不清楚 unclear_code_flag
+ *
+ * */
+
+
+
 
 ngx_list_t *
 ngx_list_create(ngx_pool_t *pool, ngx_uint_t n, size_t size)
@@ -27,6 +38,16 @@ ngx_list_create(ngx_pool_t *pool, ngx_uint_t n, size_t size)
 }
 
 
+/* 
+ * ngx_list_push 在链表中添加一个元素
+ *
+ * ngx_list_push 和 ngx_array_push特别相似
+ *
+ *  先判断列表是否“已满”。 满的话在申请一个list，挂在之前的list的上
+ *
+ *  不满的情况下直接分配中一个就行，代码特别简单 
+ *
+ * */
 void *
 ngx_list_push(ngx_list_t *l)
 {

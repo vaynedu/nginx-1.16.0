@@ -31,8 +31,8 @@ nginx-1.16.0源码分析及其注释--记录心路历程
 ### 3.数据结构<br>
 >> #### a) ngx_pool_t 内存池--src/core/ngx_palloc.c、src/os/unix/ngx_alloc.c 
 >> #### b) ngx_hash_elt_t  nginx哈希表 -- src/core/ngx_hash.c
->> #### c) ngx_array_t    动态数组 -- ngx_array.c
-
+>> #### c) ngx_array_t    动态数组 -- src/core/ngx_array.c
+>> #### d) ngx_list_t  链表 --  src/core/ngx_list.c
 
 
 ## [四.third-module -- 第三方模块](https://github.com/lotluck/nginx-1.16.0/tree/master/third-module)<br>
