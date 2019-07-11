@@ -1,18 +1,38 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <errno.h>
+#include <arpa/inet.h>
+#include <string.h>
+
 
 
 int check_ipv4_valid(const char *ip_str)
 {
+
+   if(!ip_str)  return -1;
+
    uint8_t ip[4];
 
-   sscanf(ip_str, "%d.%d.%d.%d", &ip[0], &ip[1], &ip[2], &ip[3]);
 
-   if(ip[0] < 0 || ip[0] > 256) return -1;
-   if(ip[1] < 0 || ip[1] > 256) return -1;  
-   if(ip[2] < 0 || ip[2] > 256) return -1;
-   if(ip[3] < 0 || ip[3] > 256) return -1;
+   int ret = sscanf(ip_str, "%d.%d.%d.%d", &ip[0], &ip[1], &ip[2], &ip[3]);
+   if(ret != 4)
+   {
+      printf("params = %d, errno = %d strerror = %s\n",ret , errno,strerror(errno));
+      return -2;
+   }   
 
+
+   printf("\n\n  %d %d %d %d\n", ip[0], ip[1], ip[2], ip[3]);
+
+   if(ip[0] < 0 || ip[0] > 256) return -3;
+   if(ip[1] < 0 || ip[1] > 256) return -3;  
+   if(ip[2] < 0 || ip[2] > 256) return -3;
+   if(ip[3] < 0 || ip[3] > 256) return -3;
+
+
+   printf("*(uint32_t*)&ip[0] : %u \n",*(uint32_t*)&ip[0]);
+   
+   printf("*(uint32_t*)&ip[0] : %u \n",htonl(*(uint32_t*)&ip[0]));
 
    printf("%u \n",  ip[0] * 256 * 256 * 256 + ip[1] * 256 * 256  + ip[2]  * 256 + ip[3]);
   
@@ -30,7 +50,7 @@ int  ipv4_to_int(const char *ip_str, uint32_t *ip)
      return -1;
   }
 
-  /* the ip  valid?  */
+  /* the ip is  valid?  */
   
   if(check_ipv4_valid(ip_str) != 0)
   {
@@ -92,13 +112,12 @@ int main()
 
   ret = ipv4_to_int("123.1.1.1", &ip);
   printf("ret = %d, ip_int : %u\n",ret, ip);
+
+  ret = ipv4_to_int("asd1as.asdasd.1", &ip);
+  printf("ret = %d, ip_int : %u\n",ret, ip);
+
+
   
-
-
    return 0;
 }
-
-
-
-
 
