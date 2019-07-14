@@ -32,9 +32,9 @@ typedef void (*ngx_pool_cleanup_pt)(void *data);
 typedef struct ngx_pool_cleanup_s  ngx_pool_cleanup_t;
 
 struct ngx_pool_cleanup_s {
-    ngx_pool_cleanup_pt   handler; 
-    void                 *data;
-    ngx_pool_cleanup_t   *next;
+    ngx_pool_cleanup_pt   handler; /* 自定义清理回收空间的函数指针*/ 
+    void                 *data; /* 指向要清除的数据*/
+    ngx_pool_cleanup_t   *next; 
 };
 
 
@@ -71,11 +71,12 @@ struct ngx_pool_s {
     ngx_pool_t           *current; // 指向当前的内存池
     ngx_chain_t          *chain;  // unclear_code_flag
     ngx_pool_large_t     *large;   //大块内存链表，即分配空间超过max的内存
-    ngx_pool_cleanup_t   *cleanup; //释放内存池的callback
+    ngx_pool_cleanup_t   *cleanup; //析构函数，释放内存池的callback
     ngx_log_t            *log; 
 };
 
 
+/* 非常重的数据结构，目前还没有接触到,后期接触了在补上*/
 typedef struct {
     ngx_fd_t              fd;
     u_char               *name;

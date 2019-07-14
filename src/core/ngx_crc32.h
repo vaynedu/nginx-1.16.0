@@ -13,6 +13,17 @@
 #include <ngx_core.h>
 
 
+/*
+ * crc32循环冗余校验
+ *
+ * unclear_code_flag
+ *
+ * https://blog.csdn.net/joescott/article/details/17039033
+ * https://www.cnblogs.com/bugutian/p/6221783.html
+ * https://www.cnblogs.com/masonzhang/p/10261855.html
+ *
+ * */
+
 extern uint32_t  *ngx_crc32_table_short;
 extern uint32_t   ngx_crc32_table256[];
 
@@ -73,6 +84,7 @@ ngx_crc32_update(uint32_t *crc, u_char *p, size_t len)
     crc ^= 0xffffffff
 
 
+/* ngx_crc32_table_init()函数主要是为了将ngx_crc32_table_short指向校验表格放在ngx_cacheline_size对齐的位置*/
 ngx_int_t ngx_crc32_table_init(void);
 
 
