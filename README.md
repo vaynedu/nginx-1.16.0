@@ -12,15 +12,15 @@ nginx-1.16.0源码分析及其注释--记录心路历程
 >> #### 调试练习ngx_hash.c的代码
 
 
-## [3.myngx_list](https://github.com/lotluck/nginx-1.16.0/tree/master/myexercise/myngx_list)<br>
+### [3.myngx_list](https://github.com/lotluck/nginx-1.16.0/tree/master/myexercise/myngx_list)<br>
 >> ####  调试练习ngx_list.c的代码
 
 
-## [4.myngx_md5](https://github.com/lotluck/nginx-1.16.0/tree/master/myexercise/myngx_md5)<br>
+### [4.myngx_md5](https://github.com/lotluck/nginx-1.16.0/tree/master/myexercise/myngx_md5)<br>
 >> ####  调试练习ngx_md5.c的代码
 
 
-## [5.myngx_crc](https://github.com/lotluck/nginx-1.16.0/tree/master/myexercise/myngx_crc)<br>
+### [5.myngx_crc](https://github.com/lotluck/nginx-1.16.0/tree/master/myexercise/myngx_crc)<br>
 >> ####  调试练习ngx_crc.c的代码
 
 
