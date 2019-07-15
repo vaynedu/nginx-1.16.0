@@ -17,7 +17,7 @@ nginx-1.16.0源码分析及其注释--记录心路历程
 
 
 ### [4.myngx_md5](https://github.com/lotluck/nginx-1.16.0/tree/master/myexercise/myngx_md5)<br>
->> ####  调试练习ngx_md5.c的代码
+>> ####  调试练习ngx_md5.c的代码, ngx_sha1.c亦是如此
 
 
 ### [5.myngx_crc](https://github.com/lotluck/nginx-1.16.0/tree/master/myexercise/myngx_crc)<br>
@@ -47,7 +47,7 @@ nginx-1.16.0源码分析及其注释--记录心路历程
 >> #### b) ngx_hash_elt_t  nginx哈希表 -- src/core/ngx_hash.c
 >> #### c) ngx_array_t    动态数组 -- src/core/ngx_array.c
 >> #### d) ngx_list_t  链表 --  src/core/ngx_list.c
->> #### e) ngx_md5_t  生成md5, 增加封装 --  src/core/ngx_md5.c
+>> #### e) ngx_md5_t && ngx_sha1_t  生成md5, 增加封装 --  src/core/ngx_md5.c src/core/ngx_sha1.c
 >> #### f) ngx_crc32  crc使用 --  src/core/ngx_crc32.c
 
 
