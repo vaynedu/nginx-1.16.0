@@ -23,7 +23,8 @@ CORE_INCS = -I $(NGX_ROOTPATH)src/core \
 			-I $(NGX_ROOTPATH)src/event/modules \
 			-I $(NGX_ROOTPATH)src/os/unix \
 			-I $(NGX_ROOTPATH)objs 
-			
+		
+MY_INCS = -I $(NGX_ROOTPATH)/mycommonlib/C	
 			
 NGX_PALLOC = $(NGX_ROOTPATH)/objs/src/core/ngx_palloc.o
 NGX_STRING = $(NGX_ROOTPATH)/objs/src/core/ngx_string.o
@@ -35,7 +36,7 @@ NGX_HASH = $(NGX_ROOTPATH)/objs/src/core/ngx_hash.o
 all:$(TARGETS)
 	
 $(TARGETS):$(TARGETS_C_FILE)
-	$(CC) $(CFLAGS) $(CORE_INCS) $(NGX_PALLOC) $(NGX_STRING) $(NGX_ALLOC) $(NGX_ARRAY) $(NGX_HASH) $^ -o $@
+	$(CC) $(CFLAGS) $(CORE_INCS) $(MY_INCS) $(NGX_PALLOC) $(NGX_STRING) $(NGX_ALLOC) $(NGX_ARRAY) $(NGX_HASH) $^ -o $@
 
 clean:
 	@echo "please rm"
