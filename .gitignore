@@ -1,12 +1,10 @@
 #export LANG=en_US.UTF-8
 #date +"%F %T"
 #set nocscopeverbose
-commit.sh
 tags
 cscope.in.out
 cscope.out
 cscope.po.out
-#Makefile
 
 
 *.o
@@ -16,6 +14,5 @@ objs/ngx_auto_config.h
 objs/Makefile
 Makefile
 
-myexercise/a.out
 
 third-module/tmp/*
