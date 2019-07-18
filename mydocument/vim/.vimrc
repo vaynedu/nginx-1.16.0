@@ -10,6 +10,13 @@ set  nocscopeverbose
 cs add /data/lotluck/nginx-1.16.0/cscope.out
 
 
+" 解决tag问题
+" 设置vim搜索tags的逻辑，该目录开始往上搜索
+set tags=./tags,./TAGS,tags;~,TAGS;~
+au BufEnter /home/my/proj1/* setlocal tags+=/data/lotluck/nginx-1.16.0/tags
+
+
+
 "下划线
 set cursorline
 "用浅色高亮显示当前行
