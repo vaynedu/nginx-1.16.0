@@ -40,8 +40,12 @@ set t_Co=256
 set ignorecase
 
 " 粘贴代码时取消自动缩进
-set paste
+"set paste
+"set nopaste
 
+" 解决vim删除键不能删除问题
+set nocompatible
+set backspace=indent,eol,start
 
 "代码补全
 set completeopt=preview,menu
@@ -105,5 +109,4 @@ func! Rungdb()
 	exec "!g++ % -g -o %<"
 	exec "!gdb ./%<"
 endfunc
-
 
