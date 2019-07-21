@@ -12,6 +12,8 @@ objs/autoconf.err
 objs/nginx
 objs/ngx_auto_config.h
 objs/Makefile
+objs/nginx.8
+objs/ngx_modules.c
 Makefile
 
 
