@@ -1423,6 +1423,12 @@ ngx_http_add_server(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
     return NGX_OK;
 }
 
+/*
+ *
+ * ngx_http_optimize_servers方法循环所有配置端口，创建ngx_listening_t对象，
+ * 并将其添加到conf->cycle->listening（后续操作会遍历此数组，创建socket并监听）
+ *
+ * */
 
 static ngx_int_t
 ngx_http_optimize_servers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf,

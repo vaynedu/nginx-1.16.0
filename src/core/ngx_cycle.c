@@ -29,7 +29,7 @@ ngx_uint_t             ngx_test_config;
 ngx_uint_t             ngx_dump_config;
 ngx_uint_t             ngx_quiet_mode;
 
-
+/*桩代码（Stub）,加桩调试代码，只要为了让程序编译过*/
 /* STUB NAME */
 static ngx_connection_t  dumb;
 /* STUB */
@@ -606,6 +606,12 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         }
     }
 
+	/* ngx_open_listening_sockets 启动端口监听
+	 *
+	 * ngx_http_optimize_servers 玄幻所有配置端口，创建ngx_listening_t 对象
+	 * 当接收到socket连接请求的时候，会调用ngx_http_init_connection
+	 * 
+	 * */
     if (ngx_open_listening_sockets(cycle) != NGX_OK) {
         goto failed;
     }

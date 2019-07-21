@@ -604,6 +604,12 @@ ngx_timer_signal_handler(int signo)
 #endif
 
 
+/*
+ * ngx_event_process_init函数会将监听的事件添加到epoll
+ *
+ *
+ * */
+
 static ngx_int_t
 ngx_event_process_init(ngx_cycle_t *cycle)
 {
@@ -845,6 +851,8 @@ ngx_event_process_init(ngx_cycle_t *cycle)
             }
 
         } else {
+			
+			/* 设置读事件处理的handler*/
             rev->handler = ngx_event_accept;
 
             if (ngx_use_accept_mutex) {
