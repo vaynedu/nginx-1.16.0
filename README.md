@@ -70,6 +70,8 @@ nginx-1.16.0源码分析及其注释--记录心路历程
 ### 3.git
 >> #### a) git color着色初始化脚本
 
+## 4.gcc
+>> ####  《如何处理linux库的同名函数》
 
 ## [六.tools -- 相关工具](https://github.com/lotluck/nginx-1.16.0/tree/master/tools)
 ### 1. ab 压测工具
