@@ -1,15 +1,10 @@
 
 nginx-1.16.0
 ====
-books -- 相关书籍（文件详见books目录）
+gcc -- 记录编译、链接、装载遇到问题
 ----
 
-## 一、nginx<br>
->> #### 《深入理解nginx》--陶辉
->> #### 《深入剖析nginx》
+## 一、gcc_fvisibility_hidden <br>
+>> #### 如何处理linux库的同名函数
 
 
-
-## 二、网络相关<br>
->> ####  《图解HTTP》
->> ####  《图解TCP/IP》
