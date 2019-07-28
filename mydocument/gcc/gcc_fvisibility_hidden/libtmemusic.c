@@ -8,22 +8,18 @@
 
 #include<stdio.h>
 
-extern int attribute_flag;
-
 int get_music_id()
 {
 	return 2222;
 }
 
-#if attribute_flag==0
-void tmemusic_print()
-{
-#else
+#if _ATTRIBUTE_FLAG
 void  __attribute__((visibility("default"))) tmemusic_print()
-{
-	printf("_attribute__: %d\n", attribute_flag);
+#else
+void tmemusic_print()
 #endif
-	printf("tmemusic id: %d\n", get_music_id());
+{
+    printf("tmemusic id: %d\n", get_music_id());
 
 	return;
 }

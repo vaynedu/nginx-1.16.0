@@ -9,17 +9,15 @@ ROOTPATH = $(shell pwd)
 
 
 
-CFLAGS  += -g 
-#CFLAGS += -g -fvisibility=hidden
+CFLAGS  = -g 
+CFLAGS += -D_ATTRIBUTE_FLAG -fvisibility=hidden
 
 all:
-	gcc  -fpic -c -o libqqmusic.o libqqmusic.c  $(CFLAGS)
-	gcc  -shared -o libqqmusic.so libqqmusic.o   $(CFLAGS)
-	gcc  -fpic -c -o libtmemusic.o libtmemusic.c  $(CFLAGS)
-	gcc  -shared -o libtmemusic.so libtmemusic.o $(CFLAGS)
+	gcc -fpic -shared -o libqqmusic.so libqqmusic.c -I.  $(CFLAGS)
+	gcc -fpic -shared -o libtmemusic.so libtmemusic.c -I. $(CFLAGS)
 	\cp *.so /usr/lib64/vaynedu
 	@ldconfig
-	gcc -g -o main main.c -L. -lqqmusic -ltmemusic
+	gcc -g -o main main.c -L. -lqqmusic -ltmemusic 
 	#gcc -g -o main main.c -L. -ltmemusic -lqqmusic
 	@echo -e "\n\ncompile complete\n\n"
 

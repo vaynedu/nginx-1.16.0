@@ -7,8 +7,6 @@
 
 #include<stdio.h>
 
-int attribute_flag = 0;
-
 int main(int argc, char *argv[])
 {
 

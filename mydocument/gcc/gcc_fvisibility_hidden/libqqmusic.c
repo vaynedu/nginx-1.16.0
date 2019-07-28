@@ -5,25 +5,20 @@
 *    > C-time :  Fri 26 Jul 2019 02:30:44 PM CST
 *******************************************************************/
 
-#include<stdio.h>
+#include <stdio.h>
 
-extern int attribute_flag;
 
 int get_music_id()
 {
 	return 1111;
 }
 
-#if attribute_flag==0
-void qqmusic_print()
-{
-#else
+#if _ATTRIBUTE_FLAG
 void __attribute__((visibility("default"))) qqmusic_print()
-{
-	printf("__attribute__ = %d\n",attribute_flag);
-
+#else
+void qqmusic_print()
 #endif
-	printf("qqmusic id: %d\n", get_music_id());
-
+{
+    printf("qqmusic id: %d\n", get_music_id());
 	return;
 }
