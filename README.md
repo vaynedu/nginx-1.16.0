@@ -29,7 +29,7 @@ nginx-1.16.0源码分析及其注释--记录心路历程
 ## [二.mymodule--自己编写一些模块](https://github.com/lotluck/nginx-1.16.0/tree/master/mymodule)<br>
 ### 1.ngx_http_myhello_module<br>
 >> #### 自己编写的一些hello模块，用来熟悉和掌握nginx
->> #### ./configure --prefix=/data4/nginx/nginx --add-module=./third-module/tmp/echo-nginx-module-0.61 --with-debug --add-module=./mymodule/ngx_http_myhello_module/  && make -j8 && make install
+>> #### ./configure --prefix=/usr/local/nginx   --with-cc-opt="-O0"  --add-module=./third-module/tmp/echo-nginx-module-0.61 --with-debug --add-module=./mymodule/ngx_http_myhello_module/  && make -j8 && make install
 
 
 ## 三.已翻译代码
