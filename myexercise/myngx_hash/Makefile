@@ -8,9 +8,10 @@
 
 CUR_PATH  =  $(shell pwd)
 
-NGX_ROOTPATH = /data4/nginx-1.16.0/
+NGX_ROOTPATH = /data/lotluck/nginx-1.16.0
 CC = cc
-CFLAGS =  -pipe  -O -W -Wall -Wpointer-arith -Wno-unused-parameter -Werror -g
+#CFLAGS =  -pipe  -O -W -Wall -Wpointer-arith -Wno-unused-parameter -Werror -g
+CFLAGS =  -g -O0
 CPP = cc -E
 LINK = $(CC)
 
@@ -18,11 +19,11 @@ TARGETS = myngx_hash
 TARGETS_C_FILE = $(TARGETS).c
 
 
-CORE_INCS = -I $(NGX_ROOTPATH)src/core \
-			-I $(NGX_ROOTPATH)src/event \
-			-I $(NGX_ROOTPATH)src/event/modules \
-			-I $(NGX_ROOTPATH)src/os/unix \
-			-I $(NGX_ROOTPATH)objs 
+CORE_INCS = -I $(NGX_ROOTPATH)/src/core \
+			-I $(NGX_ROOTPATH)/src/event \
+			-I $(NGX_ROOTPATH)/src/event/modules \
+			-I $(NGX_ROOTPATH)/src/os/unix \
+			-I $(NGX_ROOTPATH)/objs 
 		
 MY_INCS = -I $(NGX_ROOTPATH)/mycommonlib/C	
 			

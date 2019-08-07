@@ -70,13 +70,19 @@ typedef struct {
 /* 哈希表初始化使用的结构体*/
 typedef struct {
     ngx_hash_t       *hash;
-    ngx_hash_key_pt   key;
+    ngx_hash_key_pt   key; // hash方法的函数指针
 
-    ngx_uint_t        max_size;
-    ngx_uint_t        bucket_size;
+    ngx_uint_t        max_size; // 最大槽位
+    ngx_uint_t        bucket_size; // 每个槽位的大小，这就限制了关键字的最大长度
 
-    char             *name;
+    char             *name; // hash表的名称
     ngx_pool_t       *pool;
+	/*
+	 * temp_pool 分配实际hash桶的时候，预算需要多少个hash桶
+	 *
+	 * 非常精妙的代码
+	 *
+	 * */
     ngx_pool_t       *temp_pool;
 } ngx_hash_init_t;
 
