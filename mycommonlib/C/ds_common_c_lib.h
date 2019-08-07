@@ -10,3 +10,13 @@
 #else
 #define  DEBUG(format,...)
 #endif
+
+
+/*  "#" 运算符用在预编译时期，用于将宏参数转换为字符串，即是加上双引号 */
+#define CSTR(s) #s
+
+
+/* ##运算符用于在预编译期粘连两个符号, 连接操作， 相当于strcat*/
+#define CSTRCAT(a,b) CSTR(a##b)
+
+
