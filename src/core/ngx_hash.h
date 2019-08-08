@@ -97,6 +97,14 @@ typedef struct {
 #define NGX_HASH_READONLY_KEY     2
 
 
+/*
+ * 这里设计了3个简易的哈希列表( keys_hash、dns_wc_head_hash、dns_wc_tail_hash)，即采用分离链表法来解决冲突
+ *
+ * 这三个值调用过程中用来保存和检测是否有冲突的key值,简单点就是检测重复
+ *
+ *
+ * */
+
 typedef struct {
     ngx_uint_t        hsize;
 
