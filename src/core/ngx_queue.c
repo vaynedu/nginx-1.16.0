@@ -14,6 +14,10 @@
  * or the first element of the queue's second part otherwise
  */
 
+
+/*
+ *  return : 返回队列链表中心元素
+ * */
 ngx_queue_t *
 ngx_queue_middle(ngx_queue_t *queue)
 {
@@ -27,17 +31,31 @@ ngx_queue_middle(ngx_queue_t *queue)
 
     next = ngx_queue_head(queue);
 
+
+	/*
+	 * 思想很简单， middle指针每次一定一位
+	 * next指针每次移动两位，这样就找到了中间节点
+	 *
+	 * */
     for ( ;; ) {
         middle = ngx_queue_next(middle);
 
         next = ngx_queue_next(next);
 
+		/* 队列链表有偶数个元素
+		 *
+		 * 这里是包括head节点计算的
+		 * */
         if (next == ngx_queue_last(queue)) {
             return middle;
         }
 
         next = ngx_queue_next(next);
 
+		/* 队列链表有奇数个元素
+		 *
+		 * 这里是包括head节点计算的
+		 * */
         if (next == ngx_queue_last(queue)) {
             return middle;
         }
@@ -47,6 +65,14 @@ ngx_queue_middle(ngx_queue_t *queue)
 
 /* the stable insertion sort */
 
+/*
+ * 对列表进行排序
+ *
+ * 从头遍历链表，每次拿出一个元素，剔除，找到一个合适的位置，插入
+ *
+ * cmp 是函数指针， 选择从大到小排序还是从小到大排序
+ *
+ * */
 void
 ngx_queue_sort(ngx_queue_t *queue,
     ngx_int_t (*cmp)(const ngx_queue_t *, const ngx_queue_t *))
