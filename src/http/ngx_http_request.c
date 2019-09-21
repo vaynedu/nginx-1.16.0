@@ -2675,6 +2675,9 @@ ngx_http_terminate_handler(ngx_http_request_t *r)
 }
 
 
+/*
+ * ngx_http_finalize_connection是客户端请求被正常处理后的关闭函数
+ * */
 static void
 ngx_http_finalize_connection(ngx_http_request_t *r)
 {
@@ -2727,6 +2730,13 @@ ngx_http_finalize_connection(ngx_http_request_t *r)
                 || r->header_in->pos < r->header_in->last
                 || r->connection->read->ready)))
     {
+		/*
+		 * 设置延迟关闭调试
+		 *
+		 * 1. 没有开启keepalive机制
+		 * 2. 延迟关闭开启或者等待客户端发完数据
+		 *
+		 * */
         ngx_http_set_lingering_close(r);
         return;
     }
@@ -3341,6 +3351,12 @@ ngx_http_keepalive_handler(ngx_event_t *rev)
 }
 
 
+/*
+ * nginx 设置延迟关闭
+ *
+ * 延迟关闭的作用就是为了接收客户端发送来的剩余数据,  接收完数据后在关闭tcp连接与释放http请求
+ *
+ * */
 static void
 ngx_http_set_lingering_close(ngx_http_request_t *r)
 {
@@ -3352,17 +3368,25 @@ ngx_http_set_lingering_close(ngx_http_request_t *r)
 
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
 
+	/*设置读的回调。用于接收来自客户端发来的剩余数据*/
     rev = c->read;
     rev->handler = ngx_http_lingering_close_handler;
 
+	/* 设置延迟关闭的时间，并加入到定时器中 */
     r->lingering_time = ngx_time() + (time_t) (clcf->lingering_time / 1000);
     ngx_add_timer(rev, clcf->lingering_timeout);
-
+  
     if (ngx_handle_read_event(rev, 0) != NGX_OK) {
         ngx_http_close_request(r, 0);
         return;
     }
 
+	/*
+	 * 都需要延迟关闭了，则不需要往客户端写入数据了。因此写事件的回调设置为不做任何事情
+	 *
+	 * 在延迟关闭的时候,服务端已经把缓冲区的数据发送完毕了
+	 *
+	 * */
     wev = c->write;
     wev->handler = ngx_http_empty_handler;
 
@@ -3373,6 +3397,7 @@ ngx_http_set_lingering_close(ngx_http_request_t *r)
         }
     }
 
+	/*//都需要延迟关闭了，则不需要往客户端写入数据了，因此关闭写端*/
     if (ngx_shutdown_socket(c->fd, NGX_WRITE_SHUTDOWN) == -1) {
         ngx_connection_error(c, ngx_socket_errno,
                              ngx_shutdown_socket_n " failed");
@@ -3386,6 +3411,12 @@ ngx_http_set_lingering_close(ngx_http_request_t *r)
 }
 
 
+/*
+ * nginx设置延迟关闭的回调函数
+ *
+ * 超时还是发生可读数据，都会调用这个函数进行处理
+ *
+ * */
 static void
 ngx_http_lingering_close_handler(ngx_event_t *rev)
 {
@@ -3402,11 +3433,13 @@ ngx_http_lingering_close_handler(ngx_event_t *rev)
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, c->log, 0,
                    "http lingering close handler");
 
+	/* 超时了，过了好长时间客户端都没有发送数据。则需要释放http请求，关闭tcp连接 */
     if (rev->timedout) {
         ngx_http_close_request(r, 0);
         return;
     }
 
+	/* 都已经超过延迟关闭的总时间了，则需要释放http请求，关闭tcp连接 */
     timer = (ngx_msec_t) r->lingering_time - (ngx_msec_t) ngx_time();
     if ((ngx_msec_int_t) timer <= 0) {
         ngx_http_close_request(r, 0);
@@ -3422,6 +3455,10 @@ ngx_http_lingering_close_handler(ngx_event_t *rev)
             break;
         }
 
+		/*
+		 * 如果读错（可能网络断开等）或读的数据长度0（表示手动对端发送的FIN包）
+		 *
+		 * */
         if (n == NGX_ERROR || n == 0) {
             ngx_http_close_request(r, 0);
             return;
@@ -3563,6 +3600,17 @@ ngx_http_close_request(ngx_http_request_t *r, ngx_int_t rc)
     }
 #endif
 
+	/*
+	 * 特别重要的两个函数,同时也涉及到很多知识点
+	 *
+	 * tcp连接和http连接的关系？
+	 *
+	 * ngx_http_free_request ： 释放http请求
+	 *
+	 * ngx_http_close_connection : 关闭tcp连接
+	 *
+	 * */
+
     ngx_http_free_request(r, rc);
     ngx_http_close_connection(c);
 }
@@ -3622,8 +3670,16 @@ ngx_http_free_request(ngx_http_request_t *r, ngx_int_t rc)
 
     log->action = "closing request";
 
+	/*
+	 * 进入延迟关闭的条件： 此连接已经超时并且nginx用户配置了超时重置
+	 * */
     if (r->connection->timedout) {
         clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
+
+		/*
+		 * l_onoff = 1, l_linger = 0 立即发出rst断开连接
+		 * 
+		 * */
 
         if (clcf->reset_timedout_connection) {
             linger.l_onoff = 1;
