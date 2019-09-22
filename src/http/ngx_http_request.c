@@ -3028,6 +3028,12 @@ ngx_http_set_keepalive(ngx_http_request_t *r)
     hc = r->http_connection;
     b = r->header_in;
 
+	/*
+	 * 在接收到来自客户端的连接请求时，同时也接收到了同一个tcp连接上的第2个http请求头部
+	 *
+	 * 因此在处理完第一个请求时，pos不等于last，说明接收到了第二个http请求头部，接下来要立马处理第二个请求
+	 *
+	 * */
     if (b->pos < b->last) {
 
         /* the pipelined request */
@@ -3041,6 +3047,14 @@ ngx_http_set_keepalive(ngx_http_request_t *r)
              *
              * Now we would move the large header buffers to the free list.
              */
+
+
+			/*
+			 * 在接收来自客户端的请求行、或者请求头部时。如果连接对象的buffer缓冲区不能够存放所有的请求行，请求头。
+			 * 则http请求对象自己会开辟新的空间。因此在请求结束时，需要把请求对象开辟的空间加入到空闲表中
+			 * 这样在这个连接上有新的http请求到来时，可以复用上一个请求对象开辟的空间
+			 *
+			 */
 
             for (cl = hc->busy; cl; /* void */) {
                 ln = cl;
@@ -3087,6 +3101,7 @@ ngx_http_set_keepalive(ngx_http_request_t *r)
 
     wev = c->write;
     wev->handler = ngx_http_empty_handler;
+
 
     if (b->pos < b->last) {
 
