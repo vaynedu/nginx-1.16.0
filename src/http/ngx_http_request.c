@@ -81,6 +81,11 @@ static char *ngx_http_client_errors[] = {
 };
 
 
+/*
+ * nginx预先定义了一些常见的http请求头部，对这些常见的http头部信息，nginx服务器会将他们插入到哈希表中。
+ *
+ *
+ * */
 ngx_http_header_t  ngx_http_headers_in[] = {
     { ngx_string("Host"), offsetof(ngx_http_headers_in_t, host),
                  ngx_http_process_host },
@@ -205,7 +210,7 @@ ngx_http_header_t  ngx_http_headers_in[] = {
 
 /*
  * ngx_http_init_connection是tcp建立连接后，http请求初始化前的一个阶段,
- * 用来为新建立的客户端连接注册读事件回调ngx_http_init_request、写事件回调ngx_http_empty_handler、同时将注册读事件的超时事件到红黑树实现的定时器中。
+ * 用来为新建立的客户端连接注册读事件回调ngx_http_wait_request_handler、写事件回调ngx_http_empty_handler、同时将注册读事件的超时事件到红黑树实现的定时器中。
  * 最终将读事件放入到epoll中。这些操作执行之后，就可以接收来自客户端的数据了。
  *
  * */
@@ -385,6 +390,10 @@ ngx_http_init_connection(ngx_connection_t *c)
 }
 
 
+/*
+ * ngx_http_wait_request_handler 首次建立tcp连接后，读事件的回调，用于创建一个http请求对象
+ *
+ * */
 static void
 ngx_http_wait_request_handler(ngx_event_t *rev)
 {
@@ -400,6 +409,8 @@ ngx_http_wait_request_handler(ngx_event_t *rev)
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, c->log, 0, "http wait request handler");
 
+
+	/* 事件超时，也就是没有在一段时间内收到http头部请求，则关闭连接 */
     if (rev->timedout) {
         ngx_log_error(NGX_LOG_INFO, c->log, NGX_ETIMEDOUT, "client timed out");
         ngx_http_close_connection(c);
@@ -510,6 +521,8 @@ ngx_http_wait_request_handler(ngx_event_t *rev)
         return;
     }
 
+
+    /* 真正读取请求行数据 */
     rev->handler = ngx_http_process_request_line;
     ngx_http_process_request_line(rev);
 }
@@ -527,6 +540,12 @@ ngx_http_create_request(ngx_connection_t *c)
         return NULL;
     }
 
+	/*
+	 * 统计请求的连接数
+	 * 因为一个一个tcp连接可以对应多个请求，例如当一个http请求结束后，这个tcp可以不关闭，这样在有新http请求到来时,
+	 * 仍然使用的是这个tcp连接。因此会统计基于这个tcp连接，接收了多少个客户端请求
+	 *
+	 * */
     c->requests++;
 
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
@@ -583,9 +602,16 @@ ngx_http_alloc_request(ngx_connection_t *c)
     r->loc_conf = hc->conf_ctx->loc_conf;
 
     r->read_event_handler = ngx_http_block_reading;
-
+   
+	/*
+	 * ngx_http_request_s对象的header_in成员指向和ngx_connection_t的buffer指向同一个接收缓冲区
+	 * 为什么要这么做呢? 还是因为一个tcp连接可以对应多个http请求，多个http请求公用连接对象的接收缓冲区
+	 * 当一个http请求结束后，又新建了一个新的http请求，则这个新http请求可以继续复用这个连接对象的接收缓冲区，而不需要重新创建
+	 *
+	 * */
     r->header_in = hc->busy ? hc->busy->buf : c->buffer;
 
+	/*创建发送缓冲区，这个缓冲区存放所有要发送给客户端的http响应头部信息*/
     if (ngx_list_init(&r->headers_out.headers, r->pool, 20,
                       sizeof(ngx_table_elt_t))
         != NGX_OK)
@@ -602,6 +628,7 @@ ngx_http_alloc_request(ngx_connection_t *c)
         return NULL;
     }
 
+	/*存放所有http模块对一个请求的上下文结构, 每一个http模块都可以介入这个请求*/
     r->ctx = ngx_pcalloc(r->pool, sizeof(void *) * ngx_http_max_module);
     if (r->ctx == NULL) {
         ngx_destroy_pool(r->pool);
@@ -623,9 +650,11 @@ ngx_http_alloc_request(ngx_connection_t *c)
     }
 #endif
 
+	/* 保存原始请求 */
     r->main = r;
     r->count = 1;
 
+	/*记录请求开始处理的时间,用于限速功能，后续会根据请求的开始时间，来限制是否本次需要给客户端发送响应，从而达到限速目的*/
     tp = ngx_timeofday();
     r->start_sec = tp->sec;
     r->start_msec = tp->msec;
@@ -1048,6 +1077,12 @@ failed:
 #endif
 
 
+/* ngx_http_process_request_line函数则用来接收来自客户端的http请求行，将把读取到的请求行数据存放到http请求结构中的header_in缓冲区中。
+ * 然后使用状态机解析这个缓冲区中的数据，从而提取到请求行数据，并把解析后的结果存放到ngx_http_request_t结构的相应成员中。
+ * 当然如果http请求行太长导致一次性无法从套接字缓冲区中读取到应用层缓冲区，则这个函数会再下一次事件循环中被调用，读取剩余的数据。
+ * 函数也会修改读事件的回调为:ngx_http_process_request_headers, 用于接收http请求头部
+  
+*/   
 static void
 ngx_http_process_request_line(ngx_event_t *rev)
 {
@@ -1063,6 +1098,7 @@ ngx_http_process_request_line(ngx_event_t *rev)
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, rev->log, 0,
                    "http process request line");
 
+	/*如果超时后都没有收到http头部信息，则退出*/
     if (rev->timedout) {
         ngx_log_error(NGX_LOG_INFO, c->log, NGX_ETIMEDOUT, "client timed out");
         c->timedout = 1;
@@ -1075,13 +1111,16 @@ ngx_http_process_request_line(ngx_event_t *rev)
     for ( ;; ) {
 
         if (rc == NGX_AGAIN) {
+			/* 从内核中读取数据，存放到应用层的接收缓冲区 */
             n = ngx_http_read_request_header(r);
 
+			/* 读取过程发送错误，或者本次没有接收到tcp流(缓冲区没有内容)，则退出。待下次事件循环后在执行本函数 */
             if (n == NGX_AGAIN || n == NGX_ERROR) {
                 break;
             }
         }
 
+		/* 使用状态机解析已经收到的tcp字符流 */
         rc = ngx_http_parse_request_line(r, r->header_in);
 
         if (rc == NGX_OK) {
@@ -1151,6 +1190,9 @@ ngx_http_process_request_line(ngx_event_t *rev)
             }
 
 
+			/* 初始化请求头部链表，为获取请求头做准备。因此接下来要开始获取http请求头部 
+			 * 将获取到的头部信息保存到这个链表中，因此要开辟链表空间
+			 */
             if (ngx_list_init(&r->headers_in.headers, r->pool, 20,
                               sizeof(ngx_table_elt_t))
                 != NGX_OK)
@@ -1161,12 +1203,19 @@ ngx_http_process_request_line(ngx_event_t *rev)
 
             c->log->action = "reading client request headers";
 
+			/* 重新设置读事件回调，准备接收http头部 */
             rev->handler = ngx_http_process_request_headers;
             ngx_http_process_request_headers(rev);
 
             break;
         }
 
+
+		/*
+		 *
+		 * 请求头解析过程中遇到错误，一般为客户端发送了不符合协议规范的头部，返回400错误
+		 *
+		 * */
         if (rc != NGX_AGAIN) {
 
             /* there was error while a request line parsing */
@@ -1186,6 +1235,7 @@ ngx_http_process_request_line(ngx_event_t *rev)
 
         /* NGX_AGAIN: a request line parsing is still incomplete */
 
+		/* 判断接收缓冲区是否还有空闲的内存，没有则开辟更大的缓冲区 */
         if (r->header_in->pos == r->header_in->end) {
 
             rv = ngx_http_alloc_large_header_buffer(r, 1);
@@ -1327,7 +1377,11 @@ ngx_http_process_request_uri(ngx_http_request_t *r)
     return NGX_OK;
 }
 
-
+/*
+ * 解析http请求头部，把接收到的内容存放到r->header_in缓冲区
+ * 然后使用状态机解析这个缓冲区的数据，进而获取到每一个http请求头部
+ * 最后将解析后的头部信息保存到链表中
+ * */
 static void
 ngx_http_process_request_headers(ngx_event_t *rev)
 {
@@ -1411,6 +1465,7 @@ ngx_http_process_request_headers(ngx_event_t *rev)
         /* the host header could change the server configuration context */
         cscf = ngx_http_get_module_srv_conf(r, ngx_http_core_module);
 
+		/* 使用状态机获取http请求头部中的每一个键值对，underscores_in_headers表示key是否支持下划线 */
         rc = ngx_http_parse_header_line(r, r->header_in,
                                         cscf->underscores_in_headers);
 
@@ -1460,9 +1515,16 @@ ngx_http_process_request_headers(ngx_event_t *rev)
                 ngx_strlow(h->lowcase_key, h->key.data, h->key.len);
             }
 
+			/*
+			 * 查找key对应的ngx_http_header_t结构，这个哈希表在ngx_http_init_headers_in_hash函数中
+			 * 创建并赋值，而ngx_http_init_headers_in_hash又被http模块的初始化函数ngx_http_block调用
+			 * 将ngx_http_headers_in数组的值插入到哈希表
+			 *
+			 * */
             hh = ngx_hash_find(&cmcf->headers_in_hash, h->hash,
                                h->lowcase_key, h->key.len);
 
+			/* 调用常用http请求头部字段的回调，一般都是将headers_in中常用字段指针指向链表中相应头部节点 */
             if (hh && hh->handler(r, h, hh->offset) != NGX_OK) {
                 break;
             }
@@ -1474,6 +1536,7 @@ ngx_http_process_request_headers(ngx_event_t *rev)
             continue;
         }
 
+		/* http的所有头部都请求完成,调用处理请求头部函数，处理请求头 */
         if (rc == NGX_HTTP_PARSE_HEADER_DONE) {
 
             /* a whole header has been parsed successfully */
@@ -1481,21 +1544,35 @@ ngx_http_process_request_headers(ngx_event_t *rev)
             ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                            "http header done");
 
+			/*更新http请求的头部长度(包括请求行)*/
             r->request_length += r->header_in->pos - r->header_name_start;
 
             r->http_state = NGX_HTTP_PROCESS_REQUEST_STATE;
 
+			/*
+			 * 根据host查找server块，从而获取到正在的server块，因为前面一直使用的是默认server块的配置
+			 *
+			 * http请求头部各个字段合法性校验
+			 * 
+			 * */
             rc = ngx_http_process_request_header(r);
 
             if (rc != NGX_OK) {
                 break;
             }
 
+            /*
+			 * 特别重要的一个函数
+			 *
+			 * 到此为止http请求行与请求头已经请求完成，开始对收到的请求进行处理
+			 * 也就是调用各个http模块共同处理这个请求
+			 * */
             ngx_http_process_request(r);
 
             break;
         }
 
+		/* 缓冲区中的数据不能够构成一个http请求头，则需要继续读取数据到缓冲区中 */
         if (rc == NGX_AGAIN) {
 
             /* a header line parsing is still not complete */
@@ -1573,6 +1650,13 @@ ngx_http_read_request_header(ngx_http_request_t *r)
 }
 
 
+/*
+ * 开辟一个大的缓冲区，并把旧缓冲区的数据拷贝到新缓冲区中
+ *
+ * request_line值为1表示处理的是请求行，值为0表示处理的是请求头
+ *
+ *
+ * */
 static ngx_int_t
 ngx_http_alloc_large_header_buffer(ngx_http_request_t *r,
     ngx_uint_t request_line)
@@ -1596,10 +1680,12 @@ ngx_http_alloc_large_header_buffer(ngx_http_request_t *r,
         return NGX_OK;
     }
 
+	 /* 保存请求行或者请求头在旧缓冲区中的起始地址 */  
     old = request_line ? r->request_start : r->header_name_start;
 
     cscf = ngx_http_get_module_srv_conf(r, ngx_http_core_module);
 
+	/* 如果一个大缓冲区还装不下请求行或者一个请求头，则返回错误 */
     if (r->state != 0
         && (size_t) (r->header_in->pos - old)
                                      >= cscf->large_client_header_buffers.size)
@@ -1645,6 +1731,15 @@ ngx_http_alloc_large_header_buffer(ngx_http_request_t *r,
     cl->next = hc->busy;
     hc->busy = cl;
     hc->nbusy++;
+
+	/*
+	 * 因为nginx中，所有的请求头的保存形式都是指针（起始和结束地址），
+	 * 所以一行完整的请求头必须放在连续的内存块中。如果旧的缓冲区不能
+	 * 再放下整行请求头，则分配新缓冲区，并从旧缓冲区拷贝已经读取的部分请求头，
+	 * 拷贝完之后，需要修改所有相关指针指向到新缓冲区。
+	 * status为0表示解析完一行请求头之后，缓冲区正好被用完，这种情况不需要拷贝 
+	 *
+	 * */
 
     if (r->state == 0) {
         /*
@@ -1716,6 +1811,7 @@ ngx_http_alloc_large_header_buffer(ngx_http_request_t *r,
         r->header_end = new + (r->header_end - old);
     }
 
+	/* header_in指向这个新的缓冲区, 连接对象的缓冲区仍然为旧的缓冲区，大小没有改变 */
     r->header_in = b;
 
     return NGX_OK;
