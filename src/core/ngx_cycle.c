@@ -606,9 +606,10 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         }
     }
 
-	/* ngx_open_listening_sockets 启动端口监听
+	/* ngx_open_listening_sockets  创建监听数组中的所有socket
 	 *
-	 * ngx_http_optimize_servers 玄幻所有配置端口，创建ngx_listening_t 对象
+	 *
+	 * ngx_http_optimize_servers 所有配置端口，创建ngx_listening_t 对象
 	 * 当接收到socket连接请求的时候，会调用ngx_http_init_connection
 	 * 
 	 * */
@@ -616,6 +617,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         goto failed;
     }
 
+	/* 获取发送缓冲区，接收缓冲区大小，以及监听socket */
     if (!ngx_test_config) {
         ngx_configure_listening_sockets(cycle);
     }

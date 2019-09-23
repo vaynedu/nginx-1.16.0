@@ -689,14 +689,17 @@ ngx_parse_url(ngx_pool_t *pool, ngx_url_t *u)
     p = u->url.data;
     len = u->url.len;
 
+	/* 格式: listen unix:/var/run/nginx.sock */
     if (len >= 5 && ngx_strncasecmp(p, (u_char *) "unix:", 5) == 0) {
         return ngx_parse_unix_domain_url(pool, u);
     }
 
+	/* ipv6地址*/
     if (len && p[0] == '[') {
         return ngx_parse_inet6_url(pool, u);
     }
 
+	/* 就是处理ipv4地址信息*/
     return ngx_parse_inet_url(pool, u);
 }
 

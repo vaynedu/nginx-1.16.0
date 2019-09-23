@@ -1477,6 +1477,11 @@ ngx_http_optimize_servers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf,
 }
 
 
+/*
+ * ngx_http_server_names ： 创建前缀匹配、后缀匹配、精确匹配三个hash
+ *
+ * */
+
 static ngx_int_t
 ngx_http_server_names(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf,
     ngx_http_conf_addr_t *addr)
@@ -1679,6 +1684,10 @@ ngx_http_cmp_dns_wildcards(const void *one, const void *two)
 }
 
 
+/*
+ * ngx_http_init_listening函数将创建一个ngx_listening_t对象
+ *
+ * */
 static ngx_int_t
 ngx_http_init_listening(ngx_conf_t *cf, ngx_http_conf_port_t *port)
 {
@@ -1714,6 +1723,7 @@ ngx_http_init_listening(ngx_conf_t *cf, ngx_http_conf_port_t *port)
             continue;
         }
 
+		/* 创建一个ngx_listening_t对象，并个这个对象的成员赋值。例如设置监听回调*/
         ls = ngx_http_add_listening(cf, &addr[i]);
         if (ls == NULL) {
             return NGX_ERROR;
@@ -1759,6 +1769,9 @@ ngx_http_add_listening(ngx_conf_t *cf, ngx_http_conf_addr_t *addr)
     ngx_http_core_loc_conf_t  *clcf;
     ngx_http_core_srv_conf_t  *cscf;
 
+	/*
+	 * 创建监听对象
+	 * */
     ls = ngx_create_listening(cf, addr->opt.sockaddr, addr->opt.socklen);
     if (ls == NULL) {
         return NULL;
@@ -1766,6 +1779,7 @@ ngx_http_add_listening(ngx_conf_t *cf, ngx_http_conf_addr_t *addr)
 
     ls->addr_ntop = 1;
 
+	/*ngx_http_add_listening函数创建监听对象，并设置监听的回调为ngx_http_init_connection。在监听到客户端的连接时，这个回调将被调用*/
     ls->handler = ngx_http_init_connection;
 
     cscf = addr->default_server;

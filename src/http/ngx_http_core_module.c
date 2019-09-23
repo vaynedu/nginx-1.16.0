@@ -806,6 +806,7 @@ ngx_http_handler(ngx_http_request_t *r)
 
     r->connection->log->action = NULL;
 
+	// 内部跳转是不需要keep-alive
     if (!r->internal) {
         switch (r->headers_in.connection_type) {
         case 0:
@@ -1766,6 +1767,9 @@ ngx_http_send_response(ngx_http_request_t *r, ngx_uint_t status,
 }
 
 
+/*
+ * 发送HTTP响应头部
+ * */
 ngx_int_t
 ngx_http_send_header(ngx_http_request_t *r)
 {
@@ -1788,6 +1792,10 @@ ngx_http_send_header(ngx_http_request_t *r)
 }
 
 
+/*
+ * 发送HTTP响应包体
+ *
+ * */
 ngx_int_t
 ngx_http_output_filter(ngx_http_request_t *r, ngx_chain_t *in)
 {
@@ -3796,6 +3804,15 @@ ngx_http_core_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 }
 
 
+/*
+ * 解析listen指令
+ *
+ * listen命令的函数ngx_http_core_listen就是用来维护这样的一种socket结构
+ *
+ * 简单来说: 这个请求应该让哪个ip,哪个端口,哪个server来处理
+ *
+ *
+ * */
 static char *
 ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {

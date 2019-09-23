@@ -403,6 +403,10 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
 }
 
 
+/*
+ * ngx_open_listening_sockets将对监听数组中存放的所有ip,port , 执行socket, 绑定socket, 监听socket操作。如果失败，则最多重复执行5次
+ *
+ * */
 ngx_int_t
 ngx_open_listening_sockets(ngx_cycle_t *cycle)
 {
@@ -487,6 +491,7 @@ ngx_open_listening_sockets(ngx_cycle_t *cycle)
                 continue;
             }
 
+			/* 创建套接字 */
             s = ngx_socket(ls[i].sockaddr->sa_family, ls[i].type, 0);
 
             if (s == (ngx_socket_t) -1) {
@@ -598,6 +603,7 @@ ngx_open_listening_sockets(ngx_cycle_t *cycle)
             ngx_log_debug2(NGX_LOG_DEBUG_CORE, log, 0,
                            "bind() %V #%d ", &ls[i].addr_text, s);
 
+			/* 绑定套接字 */
             if (bind(s, ls[i].sockaddr, ls[i].socklen) == -1) {
                 err = ngx_socket_errno;
 
@@ -651,6 +657,7 @@ ngx_open_listening_sockets(ngx_cycle_t *cycle)
                 continue;
             }
 
+			/* 监听套接字*/
             if (listen(s, ls[i].backlog) == -1) {
                 err = ngx_socket_errno;
 
@@ -709,6 +716,10 @@ ngx_open_listening_sockets(ngx_cycle_t *cycle)
 }
 
 
+
+/*
+ * ngx_configure_listening_sockets 只是简单设置socket的一些选项，例如设置发送缓冲区，接收缓冲区大小，以及监听队列大小等 
+ * */
 void
 ngx_configure_listening_sockets(ngx_cycle_t *cycle)
 {

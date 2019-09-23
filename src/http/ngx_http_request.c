@@ -203,6 +203,13 @@ ngx_http_header_t  ngx_http_headers_in[] = {
 };
 
 
+/*
+ * ngx_http_init_connection是tcp建立连接后，http请求初始化前的一个阶段,
+ * 用来为新建立的客户端连接注册读事件回调ngx_http_init_request、写事件回调ngx_http_empty_handler、同时将注册读事件的超时事件到红黑树实现的定时器中。
+ * 最终将读事件放入到epoll中。这些操作执行之后，就可以接收来自客户端的数据了。
+ *
+ * */
+
 void
 ngx_http_init_connection(ngx_connection_t *c)
 {
@@ -320,6 +327,11 @@ ngx_http_init_connection(ngx_connection_t *c)
 
     c->log_error = NGX_ERROR_INFO;
 
+	/*
+	 * 读事件回调
+	 * 该写回调没有做任何事件，因为这个阶段还不需要向客户端写入任何数据
+	 *
+	 * */
     rev = c->read;
     rev->handler = ngx_http_wait_request_handler;
     c->write->handler = ngx_http_empty_handler;
@@ -361,9 +373,11 @@ ngx_http_init_connection(ngx_connection_t *c)
         return;
     }
 
+	/* 将读事件插入到红黑树中，用于管理超时事件，post_accept_timeout超时事件 */
     ngx_add_timer(rev, c->listening->post_accept_timeout);
     ngx_reusable_connection(c, 1);
 
+	/* 将读事件注册到epoll中，此时并没有把写事件注册到epoll中，因为现在还不需要向客户端发送任何数据，所以写事件并不需要注册 */
     if (ngx_handle_read_event(rev, 0) != NGX_OK) {
         ngx_http_close_connection(c);
         return;
