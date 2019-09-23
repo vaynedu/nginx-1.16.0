@@ -46,7 +46,10 @@ ngx_event_del_timer(ngx_event_t *ev)
     ev->timer_set = 0;
 }
 
-
+/*
+ * ngx_event_add_timer负责将事件注册到红黑树实现的定时器中。红黑树中的所有超时事件节点都是通过ngx_event_s对象的timer成员给串接起来。
+ * 而定时器中每一个超时事件节点的key就是超时时间，记录该事件的超时时间。
+ * */
 static ngx_inline void
 ngx_event_add_timer(ngx_event_t *ev, ngx_msec_t timer)
 {
@@ -75,14 +78,17 @@ ngx_event_add_timer(ngx_event_t *ev, ngx_msec_t timer)
         ngx_del_timer(ev);
     }
 
+	/* 设置定时器的唯一id，也就是时间 */
     ev->timer.key = key;
 
     ngx_log_debug3(NGX_LOG_DEBUG_EVENT, ev->log, 0,
                    "event timer add: %d: %M:%M",
                     ngx_event_ident(ev->data), timer, ev->timer.key);
 
+	/* 插入到红黑树中 */
     ngx_rbtree_insert(&ngx_event_timer_rbtree, &ev->timer);
 
+	/* 表示事件已经存在红黑树中了*/
     ev->timer_set = 1;
 }
 

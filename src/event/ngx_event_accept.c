@@ -18,6 +18,9 @@ static void ngx_close_accepted_connection(ngx_connection_t *c);
  *
  * 客户端socket连接请求事件的处理函数是ngx_event_accept
  *
+ * ngx_event_accept用来接收来自客户端的连接请求。tcp建立后，从连接池中获取一个新连接对象(同时获取到读、写事件)， 
+ * 并把读事件加入到epoll中。这个新连接对象与监听对象作用是不同的。 监听对象注意用来监听来自客户端的连接，是还没有与客户端建立连接前被调用。
+ * 而这个新连接对象是在tcp连接后被调用，用来与客户端进行数据读写
  *
  * */
 void
@@ -139,9 +142,15 @@ ngx_event_accept(ngx_event_t *ev)
         (void) ngx_atomic_fetch_add(ngx_stat_accepted, 1);
 #endif
 
+		/* 
+		 * work进程之间赋值均衡，但一个work进程超过每一个进程的最大连接数的7/8时
+		 * 则该work进程不在监听来自客户端的连接请求。但已经建立tcp连接的客户端不收影响，正常进行数据读写
+		 *
+		 * */
         ngx_accept_disabled = ngx_cycle->connection_n / 8
                               - ngx_cycle->free_connection_n;
 
+		/* 获取一个空闲连接对象(同时也获取到读，写事件) */
         c = ngx_get_connection(s, ev->log);
 
         if (c == NULL) {
@@ -207,6 +216,16 @@ ngx_event_accept(ngx_event_t *ev)
         }
 
         *log = ls->log;
+
+
+		/*
+		 * 设置从内核读取数据，写入数据的的公共方法。这些方法实际上就是ngx_os_io结构的各个成员
+		 * 这些方法为什么不设置在事件对象上，而是设置在连接对象。因为这对读写事件而言，这些方法是公共的。
+		 * 连接对象里面包含了读写事件对象的引用关系，如果设置在相应的读事件，或者写事件上，则每个事件都需要设置一次
+		 * 而在连接对象上只需要设置一次
+		 *
+		 * */
+
 
         c->recv = ngx_recv;
         c->send = ngx_send;
