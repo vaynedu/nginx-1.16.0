@@ -201,6 +201,9 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
         flags = 0;
 
     } else {
+		/*
+		 * 在红黑树中查找所有事件的最小超时事件，返回值timer就是所有事件的最小超时时间
+		 * */
         timer = ngx_event_find_timer();
         flags = NGX_UPDATE_TIME;
 
@@ -239,6 +242,7 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
 
     delta = ngx_current_msec;
 
+	/* 调用epoll_wait等待事件 */
     (void) ngx_process_events(cycle, timer, flags);
 
     delta = ngx_current_msec - delta;
@@ -253,6 +257,7 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
     }
 
     if (delta) {
+		/* epoll_wait返回后，处理所有超时事件 */
         ngx_event_expire_timers();
     }
 
@@ -605,8 +610,9 @@ ngx_timer_signal_handler(int signo)
 
 
 /*
- * ngx_event_process_init函数会将监听的事件添加到epoll
- *
+ * 在函数ngx_event_process_init中，会设置读事件的回调为ngx_event_accept。 这样设置后，
+ * 在nginx服务器监听到来自客户端的连接请求后，该回调会被触发，用来与客户端建立tcp连接。
+ * 连接建立后，就可以正常与客户端进行数据交互
  *
  * */
 
@@ -776,6 +782,14 @@ ngx_event_process_init(ngx_cycle_t *cycle)
 
     /* for each listening socket */
 
+	/*
+	 * 对于每一个监听端口，从连接池中取出一个连接对象(也将从读时间，写事件池取出对象，
+	 *
+	 * 使得连接，读、写保持一一对应关系),负责监听来自客户端的连接
+	 *
+	 * */
+
+
     ls = cycle->listening.elts;
     for (i = 0; i < cycle->listening.nelts; i++) {
 
@@ -794,6 +808,7 @@ ngx_event_process_init(ngx_cycle_t *cycle)
         c->type = ls[i].type;
         c->log = &ls[i].log;
 
+		/* 建立连接对象与监听对象的关系 */
         c->listening = &ls[i];
         ls[i].connection = c;
 
@@ -852,7 +867,7 @@ ngx_event_process_init(ngx_cycle_t *cycle)
 
         } else {
 			
-			/* 设置读事件处理的handler*/
+			/* 设置连接回调，当有客户端连接时，将触发回调 */
             rev->handler = ngx_event_accept;
 
             if (ngx_use_accept_mutex) {
@@ -901,6 +916,9 @@ ngx_event_process_init(ngx_cycle_t *cycle)
 
 #endif
 
+		/* 
+		 * 读事件加入epoll中
+		 * */
         if (ngx_add_event(rev, NGX_READ_EVENT, 0) == NGX_ERROR) {
             return NGX_ERROR;
         }

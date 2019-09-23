@@ -724,6 +724,11 @@ ngx_master_process_exit(ngx_cycle_t *cycle)
 }
 
 
+/*
+ * work进程的事件循环
+ *
+ * nginx服务器处理完客户端的连接请求后，又回到了work进程的事件循环中。监听新建立的对象，等待客户端发来的数据，与客户端进行数据交互
+ * */
 static void
 ngx_worker_process_cycle(ngx_cycle_t *cycle, void *data)
 {
@@ -747,6 +752,12 @@ ngx_worker_process_cycle(ngx_cycle_t *cycle, void *data)
 
         ngx_log_debug0(NGX_LOG_DEBUG_EVENT, cycle->log, 0, "worker cycle");
 
+		/*  
+		 * 非常重要的一个函数
+		 *
+		 * work进程事件循环
+		 *
+		 * */
         ngx_process_events_and_timers(cycle);
 
         if (ngx_terminate) {

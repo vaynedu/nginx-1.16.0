@@ -50,6 +50,10 @@ ngx_event_find_timer(void)
 }
 
 
+/*
+ * 调用红黑树中所有已经超时的事件回调，并把已经超时的事件从红黑树中删除
+ *
+ * */
 void
 ngx_event_expire_timers(void)
 {
@@ -87,10 +91,13 @@ ngx_event_expire_timers(void)
         ev->timer.parent = NULL;
 #endif
 
+		/* 表示事件已经不存在定时器中了 */
         ev->timer_set = 0;
 
+		/* 表示事件已经超时*/
         ev->timedout = 1;
 
+		/* 调用事件回调 */
         ev->handler(ev);
     }
 }
