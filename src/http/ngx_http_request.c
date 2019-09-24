@@ -2147,6 +2147,11 @@ ngx_http_process_request(ngx_http_request_t *r)
 
 #endif
 
+	/*
+	 * 因为已经接收完http请求行、请求头部了，准备调用各个http模块处理请求了
+	 * 因此需要接收任何来自客户端的读事件，也就不存在接收http请求头部超时问题
+	 *
+	 * */
     if (c->read->timer_set) {
         ngx_del_timer(c->read);
     }
@@ -2158,10 +2163,24 @@ ngx_http_process_request(ngx_http_request_t *r)
     r->stat_writing = 1;
 #endif
 
+	/* 重新设置当前连接的读写事件回调 */
     c->read->handler = ngx_http_request_handler;
     c->write->handler = ngx_http_request_handler;
-    r->read_event_handler = ngx_http_block_reading;
 
+    /*
+	 * 这里有疑问， 为什么读事件回调要设置ngx_http_block_reading，这到底有什么用
+	 * 这个http请求对象的读事件回调是不做任何事情的，相当于忽略读事件,因此http框架将会返回到事件模块。那为什么要忽略读事件呢?
+	 * 因为http请求行、请求头部都已经全部接收完成了,现在要做的是调度各个http模块共同协作，完成对接收到的请求行，请求头部的处理。
+	 * 因此不需要接收来自客户端任何数据了。
+	 *
+	 *
+	 * event事件模块的读写事件回调与http请求对象的读写事件回调有什么关系呢
+	 *
+	 *
+	 * */
+	r->read_event_handler = ngx_http_block_reading;
+
+	/* 调用各个http模块协同处理这个请求 */
     ngx_http_handler(r);
 }
 
@@ -2426,6 +2445,12 @@ ngx_http_find_virtual_server(ngx_connection_t *c,
 }
 
 
+/*
+ *  http请求处理读与写事件的回调，在ngx_http_process_request函数中设置
+ *
+ *  这个函数中将会调用http请求对象的读写事件回调。将event事件模块与http框架关联起来
+ *
+ * */
 static void
 ngx_http_request_handler(ngx_event_t *ev)
 {
@@ -2452,13 +2477,17 @@ ngx_http_request_handler(ngx_event_t *ev)
         ev->timedout = 0;
     }
 
+	/*如果同时发生读写事件，则只有写事件才会触发。写事件优先级更高*/
     if (ev->write) {
+		/*ngx_http_core_run_phases*/
         r->write_event_handler(r);
 
     } else {
+		/* ngx_http_block_reading */
         r->read_event_handler(r);
     }
 
+	/* 处理子请求 */
     ngx_http_run_posted_requests(c);
 }
 

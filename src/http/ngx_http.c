@@ -268,6 +268,7 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         /* 
          * preconfiguration 预先初始化配置信息
          *
+		 * 每一个http模块的在这个postconfiguration函数中，都可以把自己注册到11个http阶段
          */ 
         if (module->preconfiguration) {
             if (module->preconfiguration(cf) != NGX_OK) {

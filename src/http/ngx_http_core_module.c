@@ -838,7 +838,12 @@ ngx_http_handler(ngx_http_request_t *r)
     r->gzip_vary = 0;
 #endif
 
+	/* 设置请求对象的写事件回调，这个回调将会调度介入11个http阶段的各个http模块 
+	 * 共同完成对请求的处理
+	 * */
     r->write_event_handler = ngx_http_core_run_phases;
+
+	/* 开始调度介入11个http阶段的各个http模块 */
     ngx_http_core_run_phases(r);
 }
 
