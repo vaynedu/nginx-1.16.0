@@ -153,6 +153,14 @@ ngx_http_header_out_t  ngx_http_headers_out[] = {
 };
 
 
+/*
+ * ngx_http_header_filter : 构造http响应头部
+ *
+ * 1. 计算http响应头部的长度
+ * 2. 开启内存空间
+ * 3. 将http响应头部填充到缓冲区，发送客户端 
+ *
+ * */
 static ngx_int_t
 ngx_http_header_filter(ngx_http_request_t *r)
 {
@@ -203,6 +211,11 @@ ngx_http_header_filter(ngx_http_request_t *r)
 
     /* status line */
 
+	/*
+	 * 统计状态码字符串的长度
+	 * status_line存放的是状态码的内容，例如:"302 Moved Temporarily"
+	 *
+	 * */
     if (r->headers_out.status_line.len) {
         len += r->headers_out.status_line.len;
         status_line = &r->headers_out.status_line;
@@ -277,6 +290,7 @@ ngx_http_header_filter(ngx_http_request_t *r)
         }
     }
 
+	/* 服务器的版本信息长度 */
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
 
     if (r->headers_out.server == NULL) {
@@ -431,6 +445,7 @@ ngx_http_header_filter(ngx_http_request_t *r)
                + sizeof(CRLF) - 1;
     }
 
+	/* 开辟一个buf结构，buf大小为应答包头的大小 */
     b = ngx_create_temp_buf(r->pool, len);
     if (b == NULL) {
         return NGX_ERROR;
@@ -614,13 +629,19 @@ ngx_http_header_filter(ngx_http_request_t *r)
         b->last_buf = 1;
     }
 
+	/* 构造发送缓冲区 */
     out.buf = b;
     out.next = NULL;
 
+	/* 发送http响应头部信息给客户端 */
     return ngx_http_write_filter(r, &out);
 }
 
-
+/*
+ * ngx_http_header_filter_module是第一个http响应头部过滤模块
+ * 将ngx_http_top_header_filter函数指针指向ngx_http_header_filter, 此时这个为链表的第一个节点
+ *
+ * */
 static ngx_int_t
 ngx_http_header_filter_init(ngx_conf_t *cf)
 {

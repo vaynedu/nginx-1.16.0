@@ -255,7 +255,11 @@ ngx_http_test_if_match(ngx_http_request_t *r, ngx_table_elt_t *header,
     return 0;
 }
 
-
+/*
+ *
+ * 其实也就是直接返回一个304仅此而一次
+ *
+ * */
 static ngx_int_t
 ngx_http_not_modified_filter_init(ngx_conf_t *cf)
 {

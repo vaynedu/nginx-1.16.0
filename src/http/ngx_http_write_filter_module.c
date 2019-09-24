@@ -68,6 +68,7 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
 
     /* find the size, the flush point and the last link of the saved chain */
 
+	/* 计算out缓冲区占用字数数*/
     for (cl = r->out; cl; cl = cl->next) {
         ll = &cl->next;
 
@@ -133,6 +134,7 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
 
     /* add the new chain to the existent one */
 
+	/* 将本次待发送的缓冲区加到out尾部，并计算出out总长度 */
     for (ln = in; ln; ln = ln->next) {
         cl = ngx_alloc_chain_link(r->pool);
         if (cl == NULL) {
@@ -216,6 +218,7 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
      * is smaller than "postpone_output" directive
      */
 
+	/* 待发送的响应包体没有达到阈值，则暂时不发送 */
     if (!last && !flush && in && size < (off_t) clcf->postpone_output) {
         return NGX_OK;
     }
@@ -259,7 +262,7 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
                 - (c->sent - r->limit_rate_after);
 
         if (limit <= 0) {
-            c->write->delayed = 1;
+            c->write->delayed = 1; /* 需要延迟发送响应*/
             delay = (ngx_msec_t) (- limit * 1000 / r->limit_rate + 1);
             ngx_add_timer(c->write, delay);
 
@@ -283,6 +286,7 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, c->log, 0,
                    "http write filter limit %O", limit);
 
+	/* 调用ngx_linux_sendfile_chain发送数据，返回值是未发送完的数据 */
     chain = c->send_chain(c, r->out, limit);
 
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, c->log, 0,
@@ -333,6 +337,7 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
         ngx_free_chain(r->pool, ln);
     }
 
+	/* 保存未发送完成的数据,待下次事件触发后在发送给客户端 */
     r->out = chain;
 
     if (chain) {
