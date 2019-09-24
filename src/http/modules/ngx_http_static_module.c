@@ -45,6 +45,14 @@ ngx_module_t  ngx_http_static_module = {
 };
 
 
+/*
+ * ngx_http_static_handler
+ * 函数: http静态模块处理函数
+ * 实现: 根据http请求行中的uri信息，在服务器目录找到对应的文件并打开,然后依次发生响应报文头和包体 
+ *
+ *
+ * */
+
 static ngx_int_t
 ngx_http_static_handler(ngx_http_request_t *r)
 {
@@ -202,10 +210,16 @@ ngx_http_static_handler(ngx_http_request_t *r)
 
 #endif
 
+	/* 静态文件，不允许为post方法 */
     if (r->method == NGX_HTTP_POST) {
         return NGX_HTTP_NOT_ALLOWED;
     }
 
+	/*
+	 * 丢弃包体,即便客户端发来了包体内容，这里也不会处理，把它丢弃。
+	 * 为什么呢?因为对于静态资源文件请求，nginx服务器在获取到请求行，请求头部后，就可以调用静态模块查找文件，
+	 * 并给客户端返回文件信息。 不需要接收任何来自客户端的请求包体内容
+	 * */
     rc = ngx_http_discard_request_body(r);
 
     if (rc != NGX_OK) {
@@ -265,10 +279,12 @@ ngx_http_static_handler(ngx_http_request_t *r)
     out.buf = b;
     out.next = NULL;
 
+	/*调度各个过滤器模块互相协作，发送http包体内容*/
     return ngx_http_output_filter(r, &out);
 }
 
 
+/* 静态模块将自己注册到11个http请求阶段中的NGX_HTTP_CONTENT_PHASE阶段 */
 static ngx_int_t
 ngx_http_static_init(ngx_conf_t *cf)
 {
@@ -282,6 +298,7 @@ ngx_http_static_init(ngx_conf_t *cf)
         return NGX_ERROR;
     }
 
+    /* 静态模块在NGX_HTTP_CONTENT_PHASE阶段的处理方法 */
     *h = ngx_http_static_handler;
 
     return NGX_OK;
