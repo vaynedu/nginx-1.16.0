@@ -836,6 +836,10 @@ ngx_file_info_wrapper(ngx_str_t *name, ngx_open_file_info_t *of,
 }
 
 
+/*
+ * ngx_open_and_stat_file函数，打开文件，并获取文件信息。
+ *
+ * */
 static ngx_int_t
 ngx_open_and_stat_file(ngx_str_t *name, ngx_open_file_info_t *of,
     ngx_log_t *log)

@@ -1536,6 +1536,10 @@ ngx_http_test_content_type(ngx_http_request_t *r, ngx_hash_t *types_hash)
 }
 
 
+/*
+ * 根据http请求中的uri扩展名参数，从而获取到文件类型
+ *
+ * */
 ngx_int_t
 ngx_http_set_content_type(ngx_http_request_t *r)
 {
@@ -1550,6 +1554,7 @@ ngx_http_set_content_type(ngx_http_request_t *r)
 
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
 
+	/* 根据uri扩展名进行查找*/
     if (r->exten.len) {
 
         hash = 0;
@@ -1574,6 +1579,7 @@ ngx_http_set_content_type(ngx_http_request_t *r)
             hash = ngx_hash(hash, c);
         }
 
+		/* 根据扩展名查找哈希表，进而获取到文件类型 */
         type = ngx_hash_find(&clcf->types_hash, hash,
                              r->exten.data, r->exten.len);
 
@@ -1585,6 +1591,7 @@ ngx_http_set_content_type(ngx_http_request_t *r)
         }
     }
 
+	/* 执行到这里，说明没有找到文件类型，则使用默认的文件类型 */
     r->headers_out.content_type_len = clcf->default_type.len;
     r->headers_out.content_type = clcf->default_type;
 

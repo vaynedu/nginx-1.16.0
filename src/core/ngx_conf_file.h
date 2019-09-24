@@ -96,10 +96,10 @@ struct ngx_open_file_s {
 
 
 typedef struct {
-    ngx_file_t            file;
-    ngx_buf_t            *buffer;
+    ngx_file_t            file;  /* 文件的属性 */
+    ngx_buf_t            *buffer;/* 文件的内容 */
     ngx_buf_t            *dump;
-    ngx_uint_t            line;
+    ngx_uint_t            line;  /* 文件的行数 */
 } ngx_conf_file_t;
 
 
@@ -114,21 +114,21 @@ typedef char *(*ngx_conf_handler_pt)(ngx_conf_t *cf,
 
 
 struct ngx_conf_s {
-    char                 *name;
-    ngx_array_t          *args;
+    char                 *name; /* 当前解析到的指令 */
+    ngx_array_t          *args; /* 当前指令所包含的所有参数 */
 
-    ngx_cycle_t          *cycle;
-    ngx_pool_t           *pool;
-    ngx_pool_t           *temp_pool;
-    ngx_conf_file_t      *conf_file;
+    ngx_cycle_t          *cycle; /* 待解析的全局变量ngx_cycle_t */
+    ngx_pool_t           *pool;  
+    ngx_pool_t           *temp_pool; /* 临时内存池，分配一些临时数组或变量 */
+    ngx_conf_file_t      *conf_file; /* 待解析的配置文件 */
     ngx_log_t            *log;
 
-    void                 *ctx;
-    ngx_uint_t            module_type;
-    ngx_uint_t            cmd_type;
+    void                 *ctx;   /* 描述指令的上下文 */
+    ngx_uint_t            module_type; /* 当前解析的指令的模块类型 */
+    ngx_uint_t            cmd_type; /* 当前解析的指令的指令类型 */
 
-    ngx_conf_handler_pt   handler;
-    void                 *handler_conf;
+    ngx_conf_handler_pt   handler; /* 模块自定义的handler，即指令自定义的处理函数 */
+    void                 *handler_conf; /* 自定义处理函数需要的相关配置 */
 };
 
 
