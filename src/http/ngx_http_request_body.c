@@ -533,6 +533,14 @@ ngx_http_write_request_body(ngx_http_request_t *r)
 }
 
 
+/*
+ * nginx 丢弃http包体
+ *
+ * 静态资源模块，如果get请求，则直接丢弃包体。是否接收还是拒绝包体都是由模块来决定
+ *
+ * 丢弃http包体的首次回调函数，如果一次性不能全部接收完成并丢弃，则设置读事件的回调为ngx_http_discarded_request_body_handler
+ *
+ * */
 ngx_int_t
 ngx_http_discard_request_body(ngx_http_request_t *r)
 {
@@ -559,10 +567,12 @@ ngx_http_discard_request_body(ngx_http_request_t *r)
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, rev->log, 0, "http set discard body");
 
+	/* 需要丢弃的包体不用考虑超时问题 */
     if (rev->timer_set) {
         ngx_del_timer(rev);
     }
 
+	/* 包体长度小于等于0，则直接返回。表示丢弃包体 */
     if (r->headers_in.content_length_n <= 0 && !r->headers_in.chunked) {
         return NGX_OK;
     }
@@ -584,6 +594,7 @@ ngx_http_discard_request_body(ngx_http_request_t *r)
     rc = ngx_http_read_discarded_request_body(r);
 
     if (rc == NGX_OK) {
+		/*表示已经接收到完整的包体了，将延迟关闭清0*/
         r->lingering_close = 0;
         return NGX_OK;
     }
@@ -600,13 +611,25 @@ ngx_http_discard_request_body(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
+	/*
+	 * 表示需要多次调度才能完成丢弃包体这个操作，于是把引用计数加1，防止这边在丢弃包体，而其他事件却已经让请求意外销毁
+	 * */
     r->count++;
+
+	/*
+	 * 标识为正在丢弃包体
+	 * */
     r->discard_body = 1;
 
     return NGX_OK;
 }
 
-
+/*
+ * ngx_http_discarded_request_body_handler用于在一次调度中没有丢弃完所有包体，则该函数会表调用，用于丢弃剩余的包体。
+ * 函数内部也会调用实际的丢弃包体函数，进行接收包体然后丢弃操作。nginx服务器做了一个优化处理，会设置一个总超时时间，
+ * 如果超过这个时间都还没有丢弃完全部的包体，则会关闭这个连接。这是一种对服务器保护的措施，避免长时间的丢包操作占用服务器资源
+ *
+ * */
 void
 ngx_http_discarded_request_body_handler(ngx_http_request_t *r)
 {
@@ -626,11 +649,20 @@ ngx_http_discarded_request_body_handler(ngx_http_request_t *r)
         return;
     }
 
+	/*
+	 * 检测延迟关闭时间,如果总时长超过了lingering_time，则不再接收任何包体，这是一个总时间。
+	 * 总超时后，将直接关闭连接
+	 *
+	 * */
     if (r->lingering_time) {
         timer = (ngx_msec_t) r->lingering_time - (ngx_msec_t) ngx_time();
 
         if ((ngx_msec_int_t) timer <= 0) {
+
+			/* 清空丢弃包体标识，表示包体已经丢弃 */
             r->discard_body = 0;
+
+			/* 延迟关闭开关清0 */
             r->lingering_close = 0;
             ngx_http_finalize_request(r, NGX_ERROR);
             return;
@@ -677,7 +709,14 @@ ngx_http_discarded_request_body_handler(ngx_http_request_t *r)
     }
 }
 
-
+/*
+ *  ngx_http_read_discarded_request_body函数负责接收来自客户端的包体数据，然后再丢弃
+ *  框架而言，丢弃包体操作其实就是接收包体操作, 只不过接收后的包体数据没有交给模块使用而已
+ *
+ *  为什么nginx不直接丢弃包体呢？ 重大疑问
+ *
+ *
+ * */
 static ngx_int_t
 ngx_http_read_discarded_request_body(ngx_http_request_t *r)
 {
@@ -685,6 +724,8 @@ ngx_http_read_discarded_request_body(ngx_http_request_t *r)
     ssize_t    n;
     ngx_int_t  rc;
     ngx_buf_t  b;
+
+	/*用于接收包体的临时缓冲区*/
     u_char     buffer[NGX_HTTP_DISCARD_BUFFER_SIZE];
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
@@ -695,7 +736,9 @@ ngx_http_read_discarded_request_body(ngx_http_request_t *r)
     b.temporary = 1;
 
     for ( ;; ) {
+		/* 已经全部丢弃成功 */
         if (r->headers_in.content_length_n == 0) {
+			/* 设置丢弃后的读事件回调，再有读事件时，不做任何处理 */
             r->read_event_handler = ngx_http_block_reading;
             return NGX_OK;
         }
@@ -707,6 +750,7 @@ ngx_http_read_discarded_request_body(ngx_http_request_t *r)
         size = (size_t) ngx_min(r->headers_in.content_length_n,
                                 NGX_HTTP_DISCARD_BUFFER_SIZE);
 
+		/* 从内核中接收包体到临时缓冲区 */
         n = r->connection->recv(r->connection, buffer, size);
 
         if (n == NGX_ERROR) {
