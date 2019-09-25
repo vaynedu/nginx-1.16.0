@@ -143,6 +143,14 @@ static ngx_http_output_header_filter_pt  ngx_http_next_header_filter;
 static ngx_http_output_body_filter_pt    ngx_http_next_body_filter;
 
 
+/*
+ *  nginx的断点续传（也就是支持range请求）
+ *
+ * 1. 判断是否需要进行断点续传，如果不需要则交给下一个过滤模块处理
+ * 2. 保存各个区间块，使得发送响应数据时，能够知道要发送哪些区间的数据给客户端
+ * 3. 断点续传时，设置http响应头部，例如设置content-range，content-length
+ *
+ * */
 static ngx_int_t
 ngx_http_range_header_filter(ngx_http_request_t *r)
 {
@@ -226,18 +234,22 @@ parse:
 
     ranges = r->single_range ? 1 : clcf->max_ranges;
 
+	/* 解析http请求头部的range字段，将多个区间保存到ctx->ranges数组中 */
     switch (ngx_http_range_parse(r, ctx, ranges)) {
 
     case NGX_OK:
+		/* 保存这个模块的上下文结构，在发送区间块数据时，才能知道需要发送哪些区间的数据给客户端 */
         ngx_http_set_ctx(r, ctx, ngx_http_range_body_filter_module);
 
         r->headers_out.status = NGX_HTTP_PARTIAL_CONTENT;
         r->headers_out.status_line.len = 0;
 
+		/* 处理只有一个区间块情况 */
         if (ctx->ranges.nelts == 1) {
             return ngx_http_range_singlepart_header(r, ctx);
         }
 
+		/* 处理多个区间块 */
         return ngx_http_range_multipart_header(r, ctx);
 
     case NGX_HTTP_RANGE_NOT_SATISFIABLE:
@@ -407,7 +419,12 @@ ngx_http_range_parse(ngx_http_request_t *r, ngx_http_range_filter_ctx_t *ctx,
     return NGX_OK;
 }
 
-
+/* 
+ *    ngx_http_range_singlepart_header用于设置单个区间块的响应头部信息
+ *
+ *    content-range: bites 1-200/300 
+ *
+ * */
 static ngx_int_t
 ngx_http_range_singlepart_header(ngx_http_request_t *r,
     ngx_http_range_filter_ctx_t *ctx)
@@ -459,6 +476,47 @@ ngx_http_range_singlepart_header(ngx_http_request_t *r,
 }
 
 
+/*
+ * ngx_http_range_multipart_header函数用于在多个区间块中，设置响应包体的公共部分，以及根据各个区间块计算出响应包体的总大小
+ * 
+ * curl "123.206.25.239" -v  -H'Range: bytes=0-50, 100-150'
+ * About to connect() to 123.206.25.239 port 80 (#0)
+ *   Trying 123.206.25.239...
+ * Connected to 123.206.25.239 (123.206.25.239) port 80 (#0)
+ * > GET / HTTP/1.1
+ * > User-Agent: curl/7.29.0
+ * > Host: 123.206.25.239
+ * > Accept: *\/*           // 请求与注释冲突，所以我增加了反 /
+ * > Range: bytes=0-50, 100-150
+ * > 
+ * < HTTP/1.1 206 Partial Content
+ * < Server: nginx/1.8.0
+ * < Date: Tue, 24 Sep 2019 13:11:04 GMT
+ * < Content-Type: multipart/byteranges; boundary=00000000000000000020
+ * < Content-Length: 303
+ * < Last-Modified: Mon, 28 Aug 2017 03:17:03 GMT
+ * < Connection: keep-alive
+ * < ETag: "59a38b2f-1197"
+ * < 
+ * 
+ * --00000000000000000020
+ * Content-Type: text/html
+ * Content-Range: bytes 0-50/4503
+ * 
+ * <!doctype html>
+ * <html>
+ * <head>
+ * <meta charset="utf
+ * --00000000000000000020
+ * Content-Type: text/html
+ * Content-Range: bytes 100-150/4503
+ * 
+ * shortcut icon" href="images/logo.ico" type="image/x
+ * --00000000000000000020--
+ * * Connection #0 to host 123.206.25.239 left intact
+ * 
+ */
+
 static ngx_int_t
 ngx_http_range_multipart_header(ngx_http_request_t *r,
     ngx_http_range_filter_ctx_t *ctx)
@@ -485,6 +543,7 @@ ngx_http_range_multipart_header(ngx_http_request_t *r,
         return NGX_ERROR;
     }
 
+	/* 生成一个随机数 */
     boundary = ngx_next_temp_number(0);
 
     /*
@@ -708,6 +767,7 @@ ngx_http_range_singlepart_body(ngx_http_request_t *r,
     ll = &out;
     range = ctx->ranges.elts;
 
+	/* 遍历所有的链表节点，查看数据的开始，结束位置 */
     for (cl = in; cl; cl = cl->next) {
 
         buf = cl->buf;
@@ -726,6 +786,12 @@ ngx_http_range_singlepart_body(ngx_http_request_t *r,
             continue;
         }
 
+		/*
+		 * 当前块不满足要请求的最小区间，则查找下一块
+		 *
+		 * 与此同时，这一块pos指针指向last，表示这个块不会发送给客户端
+		 *
+		 * */
         if (range->end <= start || range->start >= last) {
 
             ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
@@ -741,27 +807,33 @@ ngx_http_range_singlepart_body(ngx_http_request_t *r,
             continue;
         }
 
+		/* 当前块满足区间，则查看开始数据位置 */
         if (range->start > start) {
 
             if (buf->in_file) {
                 buf->file_pos += range->start - start;
             }
 
+			/* 改变pos位置，发送响应时从pos位置开始，之前的内容不发送*/
             if (ngx_buf_in_memory(buf)) {
                 buf->pos += (size_t) (range->start - start);
             }
         }
 
+
+		/* 当前块位置满足区间，则查看结束数据位置 */
         if (range->end <= last) {
 
             if (buf->in_file) {
                 buf->file_last -= last - range->end;
             }
 
+			/* 改变last位置，发送响应时last之后的内容不在发送 */
             if (ngx_buf_in_memory(buf)) {
                 buf->last -= (size_t) (last - range->end);
             }
 
+			/* 标记为最后一块，即便还有剩余块，这些剩余块也不会发送给客户端 */
             buf->last_buf = (r == r->main) ? 1 : 0;
             buf->last_in_chain = 1;
             *ll = cl;
@@ -781,7 +853,12 @@ ngx_http_range_singlepart_body(ngx_http_request_t *r,
     return ngx_http_next_body_filter(r, out);
 }
 
-
+/*
+ * 请求多个区间块时，应答链表只能由一个结点组成，而不像请求单个区间，应答链表可以由多个节点组成。
+ *
+ * 假设有一个文件的内容为: "0123456789abcdef"， 一共16个字节。如果客户端想要请求两个区间块的数据， 则可以在http请求头部加上range字段， 格式为: range: bytes=0-5, 9-13;       这样nginx服务器就只会把012345以及9abcd返回给客户端，而不会发送整个文件的数据。
+ *
+ * */
 static ngx_int_t
 ngx_http_range_multipart_body(ngx_http_request_t *r,
     ngx_http_range_filter_ctx_t *ctx, ngx_chain_t *in)
