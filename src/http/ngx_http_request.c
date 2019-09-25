@@ -2547,7 +2547,12 @@ ngx_http_post_request(ngx_http_request_t *r, ngx_http_posted_request_t *pr)
     return NGX_OK;
 }
 
-
+/*
+ * 由各个http模块调用的，释放http请求的函数
+ *
+ * http框架提供的接口，供http模块调用
+ *
+ * */
 void
 ngx_http_finalize_request(ngx_http_request_t *r, ngx_int_t rc)
 {
@@ -2561,6 +2566,15 @@ ngx_http_finalize_request(ngx_http_request_t *r, ngx_int_t rc)
                    "http finalize request: %i, \"%V?%V\" a:%d, c:%d",
                    rc, &r->uri, &r->args, r == c->data, r->main->count);
 
+
+	/*
+	 * 使用场景： 当执行某个操作结束后，例如把读事件从epoll红黑树中删除时。 这个操作执行完成后，会调用这个函数，
+	 * 表示这个操作已经完成了，需要把这个操作对应的引用计数给减去1
+	 *
+	 * http请求中某一个动作结束，而请求还有其他的业务要处理，多半是传递NGX_DONE参数，
+	 * 函数内部在引用计数为0时才会销毁请求
+	 *
+	 * */
     if (rc == NGX_DONE) {
         ngx_http_finalize_connection(r);
         return;
@@ -2570,6 +2584,14 @@ ngx_http_finalize_request(ngx_http_request_t *r, ngx_int_t rc)
         c->error = 1;
     }
 
+
+	/*
+	 * 表示请求还需要按照11个http阶段继续处理下去
+	 *
+	 * 设置空，目的是为了在NGX_HTTP_CONTENT_PHASE阶段调用其它介入模块的处理方法。
+	 * 在这个阶段是很多http模块都愿意介入的阶段。将这个指针清空，目的是为了调用这些模块的处理方法
+	 *
+	 * */
     if (rc == NGX_DECLINED) {
         r->content_handler = NULL;
         r->write_event_handler = ngx_http_core_run_phases;
@@ -2594,6 +2616,10 @@ ngx_http_finalize_request(ngx_http_request_t *r, ngx_int_t rc)
         return;
     }
 
+	/*
+	 * 如果http模块需要http框架构造并发送>=300以上的响应码给客户端
+	 * 或者http模块要发送上传文件成功的201，204响应码
+	 * */
     if (rc >= NGX_HTTP_SPECIAL_RESPONSE
         || rc == NGX_HTTP_CREATED
         || rc == NGX_HTTP_NO_CONTENT)
@@ -2617,6 +2643,7 @@ ngx_http_finalize_request(ngx_http_request_t *r, ngx_int_t rc)
         c->read->handler = ngx_http_request_handler;
         c->write->handler = ngx_http_request_handler;
 
+		/* 发送响应码页面 */
         ngx_http_finalize_request(r, ngx_http_special_response_handler(r, rc));
         return;
     }
@@ -2705,6 +2732,9 @@ ngx_http_finalize_request(ngx_http_request_t *r, ngx_int_t rc)
         return;
     }
 
+	/* 执行到这里，说明是原始请求
+	 * 一次调度没有全部发送完http应答，则重新注册写事件回调以便下次调度时再次发生
+	 * */
     if (r->buffered || c->buffered || r->postponed) {
 
         if (ngx_http_set_write_handler(r) != NGX_OK) {
@@ -2743,15 +2773,25 @@ ngx_http_finalize_request(ngx_http_request_t *r, ngx_int_t rc)
         ngx_del_timer(c->write);
     }
 
+	/* 客户端浏览器发送了FIN数据包 */
     if (c->read->eof) {
         ngx_http_close_request(r, 0);
         return;
     }
 
+	/*
+	 * 正常关闭流程(是否关闭请求看引用计数是否为0，是否tcp连接要看是否开启了keepalive或者延迟关闭机制)
+	 *
+	 * */
     ngx_http_finalize_connection(r);
 }
 
-
+/*
+ * ngx_http_terminate_request用于强制终止一个请求，不管当前是否还在读取来自客户端的数据
+ *
+ * http框架内部接口。http模块不能调用
+ * 
+ * */
 static void
 ngx_http_terminate_request(ngx_http_request_t *r, ngx_int_t rc)
 {
@@ -2801,7 +2841,9 @@ ngx_http_terminate_request(ngx_http_request_t *r, ngx_int_t rc)
     ngx_http_close_request(mr, rc);
 }
 
-
+/*
+ * 将引用计数改为1，然后调用ngx_http_close_request关闭http请求与tcp连接
+ * */
 static void
 ngx_http_terminate_handler(ngx_http_request_t *r)
 {
@@ -2816,6 +2858,7 @@ ngx_http_terminate_handler(ngx_http_request_t *r)
 
 /*
  * ngx_http_finalize_connection是客户端请求被正常处理后的关闭函数
+ *
  * */
 static void
 ngx_http_finalize_connection(ngx_http_request_t *r)
@@ -2833,10 +2876,15 @@ ngx_http_finalize_connection(ngx_http_request_t *r)
 
     if (r->main->count != 1) {
 
+		/* 如果是丢弃包体，则设置回调 */
         if (r->discard_body) {
             r->read_event_handler = ngx_http_discarded_request_body_handler;
             ngx_add_timer(r->connection->read, clcf->lingering_timeout);
 
+			/*
+			 * 设置强制关闭连接的时间，避免一直处理丢弃包体操作
+			 * 如果超过了这个时间，则http框架不在接收包体后再执行丢弃包体，直接关闭
+			 * */
             if (r->lingering_time == 0) {
                 r->lingering_time = ngx_time()
                                       + (time_t) (clcf->lingering_time / 1000);
@@ -2854,6 +2902,12 @@ ngx_http_finalize_connection(ngx_http_request_t *r)
         r->lingering_close = 1;
     }
 
+	/*
+	 * 执行到这里，引用计数为1，则要准备结束请求了
+	 *
+	 * keepalive为1表示请求需要释放，但tcp连接还是用复用的
+	 *
+	 * */
     if (!ngx_terminate
          && !ngx_exiting
          && r->keepalive
@@ -2884,6 +2938,9 @@ ngx_http_finalize_connection(ngx_http_request_t *r)
 }
 
 
+/*
+ * 如果写数据一次性没写完，则重新注册写回调
+ * */
 static ngx_int_t
 ngx_http_set_write_handler(ngx_http_request_t *r)
 {
@@ -2895,6 +2952,8 @@ ngx_http_set_write_handler(ngx_http_request_t *r)
     r->read_event_handler = r->discard_body ?
                                 ngx_http_discarded_request_body_handler:
                                 ngx_http_test_reading;
+
+	/* 写事件回调，下线调度时继续往客户端发送包体 */
     r->write_event_handler = ngx_http_writer;
 
     wev = r->connection->write;
@@ -2908,6 +2967,7 @@ ngx_http_set_write_handler(ngx_http_request_t *r)
         ngx_add_timer(wev, clcf->send_timeout);
     }
 
+	/* 注册写事件到epoll */
     if (ngx_handle_write_event(wev, clcf->send_lowat) != NGX_OK) {
         ngx_http_close_request(r, 0);
         return NGX_ERROR;
@@ -3725,7 +3785,7 @@ ngx_http_post_action(ngx_http_request_t *r)
     return NGX_OK;
 }
 
-
+/* 关闭一个请求(将引用计数减去1，如果引用计数为0则会真正的关闭请求，否则不会关闭请求) */
 static void
 ngx_http_close_request(ngx_http_request_t *r, ngx_int_t rc)
 {
@@ -3741,6 +3801,9 @@ ngx_http_close_request(ngx_http_request_t *r, ngx_int_t rc)
         ngx_log_error(NGX_LOG_ALERT, c->log, 0, "http request count is zero");
     }
 
+	/* 在用释放请求时，先把引用计数减1，然后引用计数还不为0则说明可能还有其他http模块需要
+	 * 使用到这个请求，此时还不能释放请求，函数直接返回。
+	 * */
     r->count--;
 
     if (r->count || r->blocked) {

@@ -1193,7 +1193,11 @@ ngx_http_core_post_access_phase(ngx_http_request_t *r,
     return NGX_AGAIN;
 }
 
-
+/*
+ * NGX_HTTP_CONTENT_PHASE阶段的checker方法
+ *
+ * 这里还不清楚
+ * */
 ngx_int_t
 ngx_http_core_content_phase(ngx_http_request_t *r,
     ngx_http_phase_handler_t *ph)
@@ -1202,6 +1206,7 @@ ngx_http_core_content_phase(ngx_http_request_t *r,
     ngx_int_t  rc;
     ngx_str_t  path;
 
+	/* 优先使用location内的content_handler回调 */
     if (r->content_handler) {
         r->write_event_handler = ngx_http_request_empty_handler;
         ngx_http_finalize_request(r, r->content_handler(r));
@@ -1211,6 +1216,7 @@ ngx_http_core_content_phase(ngx_http_request_t *r,
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "content phase: %ui", r->phase_handler);
 
+	/* 在content_handler方法不存在时，才使用各个模块提供的全局的回调 */
     rc = ph->handler(r);
 
     if (rc != NGX_DECLINED) {
