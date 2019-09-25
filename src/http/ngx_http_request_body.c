@@ -26,6 +26,14 @@ static ngx_int_t ngx_http_request_body_chunked_filter(ngx_http_request_t *r,
     ngx_chain_t *in);
 
 
+/* 
+ *  ngx_http_read_client_request_body : http框架接收包体入口
+ *
+ *  1、函数将开辟接收包体缓冲区，保存到http请求结构中的request_body。接收到来自客户端的包体都会存放到这个空间
+ *  2、判断是否预先读取了部分包体, 如果在接收http请求头部时，也把包体数据也读取出来了，则处理预先读取的包体。
+ *  3、设置请求对应的读事件的回调, 使得一次性没有读完全部包体时，再一次调度时能够继续读取剩余包体数据。
+ *
+ * */
 ngx_int_t
 ngx_http_read_client_request_body(ngx_http_request_t *r,
     ngx_http_client_body_handler_pt post_handler)
@@ -87,6 +95,7 @@ ngx_http_read_client_request_body(ngx_http_request_t *r,
 
     preread = r->header_in->last - r->header_in->pos;
 
+	/* 已经预先读取过一部分http包体 */
     if (preread) {
 
         /* there is the pre-read part of the request body */
@@ -241,6 +250,10 @@ ngx_http_read_unbuffered_request_body(ngx_http_request_t *r)
 }
 
 
+/*
+ *   如果一次没有接收完全部的包体数据，则会把请求的读方法设置为ngx_http_read_client_request_body_handler
+ *
+ * */
 static void
 ngx_http_read_client_request_body_handler(ngx_http_request_t *r)
 {
@@ -252,6 +265,7 @@ ngx_http_read_client_request_body_handler(ngx_http_request_t *r)
         return;
     }
 
+	/* 调用接收包体函数，接收剩余的包体数据 */
     rc = ngx_http_do_read_client_request_body(r);
 
     if (rc >= NGX_HTTP_SPECIAL_RESPONSE) {
@@ -259,7 +273,10 @@ ngx_http_read_client_request_body_handler(ngx_http_request_t *r)
     }
 }
 
-
+/* 
+ * 实际接收包体则由ngx_http_do_read_client_request_body函数完成
+ *
+ * */
 static ngx_int_t
 ngx_http_do_read_client_request_body(ngx_http_request_t *r)
 {
@@ -280,6 +297,7 @@ ngx_http_do_read_client_request_body(ngx_http_request_t *r)
 
     for ( ;; ) {
         for ( ;; ) {
+
             if (rb->buf->last == rb->buf->end) {
 
                 if (rb->buf->pos != rb->buf->last) {
@@ -416,8 +434,16 @@ ngx_http_do_read_client_request_body(ngx_http_request_t *r)
         ngx_del_timer(c->read);
     }
 
+	/*
+	 * 如果数据全部接收完成，则会设置读请求的回调为ngx_http_block_reading.这个函数不会做任何事情，
+	 * 表示包体已经读取完成，再有读事件时，将不做任何处理。以此同时将回调http模块的post_handler方法，
+	 * 说明包体已经全部接收完成了，后续的操作交由模块自己来处理
+	 *
+	 * */
     if (!r->request_body_no_buffering) {
         r->read_event_handler = ngx_http_block_reading;
+
+		/*调用接收包体完成后的回调,也就是说，在所有包体都接收完成后，才会调用，转发给上游服务器 */
         rb->post_handler(r);
     }
 
