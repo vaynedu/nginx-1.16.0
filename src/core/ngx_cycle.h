@@ -46,6 +46,7 @@ struct ngx_cycle_s {
     ngx_uint_t                log_use_stderr;  /* unsigned  log_use_stderr:1; */
 
     ngx_connection_t        **files;
+	/*指向下一个空闲连接，归还连接的 时候，只需要把该连接插入到free_connections链表表头即可*/
     ngx_connection_t         *free_connections;
     ngx_uint_t                free_connection_n;
 
@@ -53,6 +54,7 @@ struct ngx_cycle_s {
     ngx_uint_t                modules_n;
     ngx_uint_t                modules_used;    /* unsigned  modules_used:1; */
 
+	/* 双向链表容器，元素类型是ngx_connection_t结构体，表示可重复使用连接队列 表示可以重用的连接 */
     ngx_queue_t               reusable_connections_queue;
     ngx_uint_t                reusable_connections_n;
 
@@ -69,6 +71,10 @@ struct ngx_cycle_s {
     ngx_uint_t                connection_n;
     ngx_uint_t                files_n;
 
+	/* 指向整个连接池数组的首部
+	 * connections、read_events、write_events 每个连接读写事件绑定在一起，配合使用
+	 *
+	 * */
     ngx_connection_t         *connections;
     ngx_event_t              *read_events;
     ngx_event_t              *write_events;
