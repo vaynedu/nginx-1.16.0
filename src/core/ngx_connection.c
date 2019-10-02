@@ -1119,7 +1119,9 @@ ngx_get_connection(ngx_socket_t s, ngx_log_t *log)
 
     c = ngx_cycle->free_connections;
 
+	/*nginx连接池的连接已经使用完*/
     if (c == NULL) {
+		/*将一些keepalive连接给释放掉*/
         ngx_drain_connections((ngx_cycle_t *) ngx_cycle);
         c = ngx_cycle->free_connections;
     }
@@ -1154,6 +1156,7 @@ ngx_get_connection(ngx_socket_t s, ngx_log_t *log)
     ngx_memzero(rev, sizeof(ngx_event_t));
     ngx_memzero(wev, sizeof(ngx_event_t));
 
+	/*每次获取连接，将读写事件的标志位置反*/
     rev->instance = !instance;
     wev->instance = !instance;
 
@@ -1270,12 +1273,24 @@ ngx_close_connection(ngx_connection_t *c)
 }
 
 
+
+/*
+ * reusable连接队列是如何建立的呢?
+ *  
+ *  ngx_http_set_keepalive()
+ * 
+ *  ngx_http_keepalive_handler()
+ *
+ *
+ * */
+
 void
 ngx_reusable_connection(ngx_connection_t *c, ngx_uint_t reusable)
 {
     ngx_log_debug1(NGX_LOG_DEBUG_CORE, c->log, 0,
                    "reusable connection: %ui", reusable);
 
+	/* 一旦一个keepalive的连接正常处理了，就将其从reusable队列中移除 */
     if (c->reusable) {
         ngx_queue_remove(&c->queue);
         ngx_cycle->reusable_connections_n--;
@@ -1285,11 +1300,17 @@ ngx_reusable_connection(ngx_connection_t *c, ngx_uint_t reusable)
 #endif
     }
 
+	/*
+	 * 在ngx_http_set_keepalive中会将reusable置为1，reusable为1的直接效果
+	 * 就是将该连接插到reusable_connections_queue中
+	 * */
     c->reusable = reusable;
 
+	/* 当reusable为0时，意味着该keepalive被正常的处理掉了，不应该被再次添加到reusable队列中了。*/
     if (reusable) {
         /* need cast as ngx_cycle is volatile */
 
+		/* 这里使用头插法，较新的连接靠近头部，时间越久未被处理的连接越靠尾*/
         ngx_queue_insert_head(
             (ngx_queue_t *) &ngx_cycle->reusable_connections_queue, &c->queue);
         ngx_cycle->reusable_connections_n++;
@@ -1300,6 +1321,13 @@ ngx_reusable_connection(ngx_connection_t *c, ngx_uint_t reusable)
     }
 }
 
+/* 
+ * 释放长连接
+ * 
+ * ngx_get_connection 在没有空闲连接的时候，就会释放已建立长时间为使用的长连接
+ *
+ *
+ * */
 
 static void
 ngx_drain_connections(ngx_cycle_t *cycle)
@@ -1308,6 +1336,7 @@ ngx_drain_connections(ngx_cycle_t *cycle)
     ngx_queue_t       *q;
     ngx_connection_t  *c;
 
+	/* 旧版本的nginx每次固定释放32个， 新版本nginx最大释放32个*/
     n = ngx_max(ngx_min(32, cycle->reusable_connections_n / 8), 1);
 
     for (i = 0; i < n; i++) {
@@ -1315,12 +1344,18 @@ ngx_drain_connections(ngx_cycle_t *cycle)
             break;
         }
 
+		/*reusable连接队列是从头插入的，意味着越靠近队列尾部的连接，空闲未被使用的时间就越长，这种情况下，优先回收它，类似LRU*/
         q = ngx_queue_last(&cycle->reusable_connections_queue);
         c = ngx_queue_data(q, ngx_connection_t, queue);
 
         ngx_log_debug0(NGX_LOG_DEBUG_CORE, c->log, 0,
                        "reusing connection");
 
+
+		/* 这里的handler是ngx_http_keepalive_handler，这函数里，由于close被置1，
+		 *
+		 * 所以会执行ngx_http_close_connection来释放连接，这样也就发生了keepalive, 连接被强制断掉的现象了
+		 * */
         c->close = 1;
         c->read->handler(c->read);
     }
