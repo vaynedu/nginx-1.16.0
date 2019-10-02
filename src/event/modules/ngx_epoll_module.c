@@ -618,6 +618,7 @@ ngx_epoll_add_event(ngx_event_t *ev, ngx_int_t event, ngx_uint_t flags)
 #endif
 
     ee.events = events | (uint32_t) flags;
+	 /*data.ptr保存连接的地址。但是地址的最后一位是处理过的，和事件的instance位一致。*/
     ee.data.ptr = (void *) ((uintptr_t) c | ev->instance);
 
     ngx_log_debug3(NGX_LOG_DEBUG_EVENT, ev->log, 0,
@@ -779,6 +780,14 @@ ngx_epoll_notify(ngx_event_handler_pt handler)
 
 #endif
 
+/*
+ * nginx的过期事件判断流程
+ * 1. 初始化时，所有连接的地址最后一位默认为0，读写事件的instance=1
+ * 2. 从空闲连接列表中获取新的可用连接时，将连接地址最后一位置反。
+ * 3. 注册事件时，将连接地址最后一位设为事件的instance标志位。
+ * 4. 处理事件时，取连接地址最后一位，与事件的instance标志位对比，不一致说明获取过新的连接，说明旧连接已经不存在，则为过期事件。（旧连接存在的情况下，不会放回空闲连接列表）
+ *
+ * */
 
 static ngx_int_t
 ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags)
@@ -801,6 +810,7 @@ ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags)
 
     err = (events == -1) ? ngx_errno : 0;
 
+	/* 更新缓存时间 */
     if (flags & NGX_UPDATE_TIME || ngx_event_timer_alarm) {
         ngx_time_update();
     }
@@ -834,13 +844,20 @@ ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags)
     }
 
     for (i = 0; i < events; i++) {
+		/* 取出事件对应的连接 */
         c = event_list[i].data.ptr;
 
+		/* 连接的指针地址最后一位取出来，作为连接的 instance 标志位 */
         instance = (uintptr_t) c & 1;
+		/* 将连接的指针地址最后一位置0，还原连接真正的地址 */
         c = (ngx_connection_t *) ((uintptr_t) c & (uintptr_t) ~1);
 
         rev = c->read;
 
+		/* 判断是否过期 
+		 *
+		 * 事件的标志位和连接的标志位不一样，说明过期了
+		 * */
         if (c->fd == -1 || rev->instance != instance) {
 
             /*
@@ -892,6 +909,7 @@ ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags)
 
             rev->ready = 1;
 
+			/*通过 flag 标志位，将事件先放到 2个队列中，稍后延迟处理。*/
             if (flags & NGX_POST_EVENTS) {
                 queue = rev->accept ? &ngx_posted_accept_events
                                     : &ngx_posted_events;
@@ -899,6 +917,7 @@ ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags)
                 ngx_post_event(rev, queue);
 
             } else {
+				/*没有置位就直接处理了。*/
                 rev->handler(rev);
             }
         }

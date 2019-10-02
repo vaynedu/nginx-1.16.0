@@ -21,8 +21,10 @@
 
 typedef struct ngx_peer_connection_s  ngx_peer_connection_t;
 
+/*当使用长连接与上游服务器通信时，可通过该方法由连接池获取 一个新的连接*/
 typedef ngx_int_t (*ngx_event_get_peer_pt)(ngx_peer_connection_t *pc,
     void *data);
+/*当 使用长连接与上游服务器通信时，通过该方法 将使用完毕 的连接释放给连接池*/
 typedef void (*ngx_event_free_peer_pt)(ngx_peer_connection_t *pc, void *data,
     ngx_uint_t state);
 typedef void (*ngx_event_notify_peer_pt)(ngx_peer_connection_t *pc,
@@ -34,12 +36,16 @@ typedef void (*ngx_event_save_peer_session_pt)(ngx_peer_connection_t *pc,
 
 
 struct ngx_peer_connection_s {
+	/*一个主动连接实际 上也需要ngx_connection_t结构体的大部分成员，并且处于重用的考虑 而定义 了connecion*/
     ngx_connection_t                *connection;
-
+    
+	/*远端服务器的socketaddr*/
     struct sockaddr                 *sockaddr;
     socklen_t                        socklen;
+	/*远端服务器的名称 */
     ngx_str_t                       *name;
 
+	/*表示在连接 一个 远端服务器，当前连接出现 异常失败后可以重试的次数，也就是允许的最多失败的次数*/
     ngx_uint_t                       tries;
     ngx_msec_t                       start_time;
 
@@ -53,6 +59,7 @@ struct ngx_peer_connection_s {
     ngx_event_save_peer_session_pt   save_session;
 #endif
 
+	/*  本机地址信息  */
     ngx_addr_t                      *local;
 
     int                              type;

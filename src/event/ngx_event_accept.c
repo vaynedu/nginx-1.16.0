@@ -139,6 +139,7 @@ ngx_event_accept(ngx_event_t *ev)
         }
 
 #if (NGX_STAT_STUB)
+		/*这里是用于统计每个worker进程的统计数据，比如accept的数量等*/
         (void) ngx_atomic_fetch_add(ngx_stat_accepted, 1);
 #endif
 
@@ -343,6 +344,7 @@ ngx_event_accept(ngx_event_t *ev)
 ngx_int_t
 ngx_trylock_accept_mutex(ngx_cycle_t *cycle)
 {
+	/* ngx_shmtx_trylock是非阻塞的调用，返回1表示成功拿到锁，返回0表示获取锁失败 */
     if (ngx_shmtx_trylock(&ngx_accept_mutex)) {
 
         ngx_log_debug0(NGX_LOG_DEBUG_EVENT, cycle->log, 0,
@@ -352,6 +354,7 @@ ngx_trylock_accept_mutex(ngx_cycle_t *cycle)
             return NGX_OK;
         }
 
+		/*禁止accpet新的连接时，释放锁*/
         if (ngx_enable_accept_events(cycle) == NGX_ERROR) {
             ngx_shmtx_unlock(&ngx_accept_mutex);
             return NGX_ERROR;
@@ -366,6 +369,7 @@ ngx_trylock_accept_mutex(ngx_cycle_t *cycle)
     ngx_log_debug1(NGX_LOG_DEBUG_EVENT, cycle->log, 0,
                    "accept mutex lock failed: %ui", ngx_accept_mutex_held);
 
+	/* 没有获取到锁时要将ngx_accept_mutex_held置为0 */
     if (ngx_accept_mutex_held) {
         if (ngx_disable_accept_events(cycle, 0) == NGX_ERROR) {
             return NGX_ERROR;

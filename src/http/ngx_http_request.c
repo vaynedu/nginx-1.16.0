@@ -366,6 +366,12 @@ ngx_http_init_connection(ngx_connection_t *c)
         c->log->action = "reading PROXY protocol";
     }
 
+	/*
+	 * 检查当前连接上读事件是否准备就绪（即 ready 标志位为1）：
+	 * 若读事件 ready 标志位为1，表示当前连接上有可读的TCP 流，则执行读事件的回调方法ngx_http_wait_request_handler；
+	 * 若读事件 ready 标志位为0，表示当前连接上没有可读的TCP 流，则将读事件添加到定时器事件机制中（监控可读事件是否超时），同时将读事件注册到epoll 事件机制中，等待可读事件的发生
+	 *
+	 * */
     if (rev->ready) {
         /* the deferred accept(), iocp */
 
