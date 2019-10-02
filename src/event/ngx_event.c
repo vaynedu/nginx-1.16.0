@@ -115,10 +115,14 @@ ngx_module_t  ngx_events_module = {
 
 
 static ngx_str_t  event_core_name = ngx_string("event_core");
-
-
+/* 模块的配置项指令结构 ngx_event_core_commands 决定了该模块的功能
+ *
+ * 定义ngx_event_core_module 模块感兴趣的配置项 
+ *
+ * */
 static ngx_command_t  ngx_event_core_commands[] = {
 
+	/* 每个worker进程中TCP最大连接数 */
     { ngx_string("worker_connections"),
       NGX_EVENT_CONF|NGX_CONF_TAKE1,
       ngx_event_connections,
@@ -126,6 +130,7 @@ static ngx_command_t  ngx_event_core_commands[] = {
       0,
       NULL },
 
+	 /* 选择事件模块作为事件驱动机制 */
     { ngx_string("use"),
       NGX_EVENT_CONF|NGX_CONF_TAKE1,
       ngx_event_use,
@@ -133,6 +138,7 @@ static ngx_command_t  ngx_event_core_commands[] = {
       0,
       NULL },
 
+	/* 批量接收连接 */
     { ngx_string("multi_accept"),
       NGX_EVENT_CONF|NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
@@ -140,6 +146,7 @@ static ngx_command_t  ngx_event_core_commands[] = {
       offsetof(ngx_event_conf_t, multi_accept),
       NULL },
 
+	/* 是否打开accept_mutex负载均衡锁 */
     { ngx_string("accept_mutex"),
       NGX_EVENT_CONF|NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
@@ -147,6 +154,7 @@ static ngx_command_t  ngx_event_core_commands[] = {
       offsetof(ngx_event_conf_t, accept_mutex),
       NULL },
 
+	 /* 打开accept_mutex负载均衡锁后，延迟处理新连接事件 */
     { ngx_string("accept_mutex_delay"),
       NGX_EVENT_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_msec_slot,
@@ -154,6 +162,7 @@ static ngx_command_t  ngx_event_core_commands[] = {
       offsetof(ngx_event_conf_t, accept_mutex_delay),
       NULL },
 
+	/* 对指定IP的TCP连接打印debug级别的调试日志 */
     { ngx_string("debug_connection"),
       NGX_EVENT_CONF|NGX_CONF_TAKE1,
       ngx_event_debug_connection,
@@ -174,6 +183,7 @@ static ngx_event_module_t  ngx_event_core_module_ctx = {
 };
 
 
+/* 事件模块的定义 */
 ngx_module_t  ngx_event_core_module = {
     NGX_MODULE_V1,
     &ngx_event_core_module_ctx,            /* module context */
@@ -188,6 +198,7 @@ ngx_module_t  ngx_event_core_module = {
     NULL,                                  /* exit master */
     NGX_MODULE_V1_PADDING
 };
+
 
 
 void
@@ -223,16 +234,25 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
             ngx_accept_disabled--;
 
         } else {
+			/* 先调用获取锁的操作 */
             if (ngx_trylock_accept_mutex(cycle) == NGX_ERROR) {
                 return;
             }
 
             if (ngx_accept_mutex_held) {
+				/* 如果获取到锁了，则ngx_accept_mutex_held为1，此时仅仅将flag置为NGX_POST_EVENTS，那么后面在处理事件时，不会立刻调用handle,
+				 * 而是先将事件放到 ngx_posted_accept_events 和 ngx_posted_events 2个队列中
+				 * */
                 flags |= NGX_POST_EVENTS;
 
             } else {
-                if (timer == NGX_TIMER_INFINITE
-                    || timer > ngx_accept_mutex_delay)
+				/* 如果没有获取到锁，则定时在在某个时间点再次获取, 但是这个时间不能太长也不能太短。这意味着，即使开启了timer_resolution时间精度，
+				 * 也需要让ngx_process_events方法在没有新事件的时候至少等待ngx_accept_mutex_delay毫秒再去试图抢锁。而没有开启时间精度时，
+				 * 如果最近一个定时器事件的超时时间距离现在超过了ngx_accept_mutex_delay毫秒的话，也要把timer设置为ngx_accept_mutex_delay毫秒，
+				 * 这是因为当前进程虽然没有抢到accept_mutex锁，但也不能让ngx_process_events方法在没有新事件的时候等待的时间超过ngx_accept_mutex_delay毫秒，
+				 * 这会影响整个负载均衡机制。*/
+                if (timer == NGX_TIMER_INFINITE /* 没有开启timer_resolution时间精度 */
+                    || timer > ngx_accept_mutex_delay) /* 开启了但是超过了ngx_accept_mutex_delay */
                 {
                     timer = ngx_accept_mutex_delay;
                 }
@@ -240,6 +260,9 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
         }
     }
 
+	/* 调用事件处理函数，也就是 ngx_epoll_process_events， 也就是 epoll_wait() 等待事件
+	 * 由于 flag 位的存在，到来的事件不会立刻被 handle 调用，而是先放到2个队列中
+	 * */
     delta = ngx_current_msec;
 
 	/* 调用epoll_wait等待事件 */
@@ -250,8 +273,10 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
     ngx_log_debug1(NGX_LOG_DEBUG_EVENT, cycle->log, 0,
                    "timer delta: %M", delta);
 
+	/*先处理ngx_posted_accept_events队列中事件，也就是建立连接的事件*/
     ngx_event_process_posted(cycle, &ngx_posted_accept_events);
 
+	/*连接建立完之后就可以释放锁了。这样保证了锁的粒度足够小。保证了不被普通事件的handler调用占用时间过久*/
     if (ngx_accept_mutex_held) {
         ngx_shmtx_unlock(&ngx_accept_mutex);
     }
@@ -261,10 +286,12 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
         ngx_event_expire_timers();
     }
 
+	/*继续处理普通的事件*/
     ngx_event_process_posted(cycle, &ngx_posted_events);
 }
 
 
+/* 将读事件注册要事件驱动模块中 */
 ngx_int_t
 ngx_handle_read_event(ngx_event_t *rev, ngx_uint_t flags)
 {
@@ -333,6 +360,7 @@ ngx_handle_read_event(ngx_event_t *rev, ngx_uint_t flags)
 }
 
 
+/* 将写事件注册要事件驱动模块中*/
 ngx_int_t
 ngx_handle_write_event(ngx_event_t *wev, size_t lowat)
 {
@@ -465,6 +493,7 @@ ngx_event_init_conf(ngx_cycle_t *cycle, void *conf)
 }
 
 
+/* 初始化事件模块 */
 static ngx_int_t
 ngx_event_module_init(ngx_cycle_t *cycle)
 {
@@ -476,14 +505,18 @@ ngx_event_module_init(ngx_cycle_t *cycle)
     ngx_core_conf_t     *ccf;
     ngx_event_conf_t    *ecf;
 
+	 /* 获取存储所有事件模块配置结构的指针数据的首地址 */
     cf = ngx_get_conf(cycle->conf_ctx, ngx_events_module);
+	 /* 获取事件模块ngx_event_core_module的配置结构 */
     ecf = (*cf)[ngx_event_core_module.ctx_index];
 
+	/* 在错误日志中输出被使用的事件模块名称 */
     if (!ngx_test_config && ngx_process <= NGX_PROCESS_MASTER) {
         ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0,
                       "using the \"%s\" event method", ecf->name);
     }
 
+	/* 获取模块ngx_core_module的配置结构 */
     ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
 
     ngx_timer_resolution = ccf->timer_resolution;
@@ -493,11 +526,18 @@ ngx_event_module_init(ngx_cycle_t *cycle)
     ngx_int_t      limit;
     struct rlimit  rlmt;
 
+	/* 获取当前进程所打开的最大文件描述符个数 */
     if (getrlimit(RLIMIT_NOFILE, &rlmt) == -1) {
         ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
                       "getrlimit(RLIMIT_NOFILE) failed, ignored");
 
     } else {
+		/*
+		 * 当前事件模块的连接数大于最大文件描述符个数，
+		 * 或者大于由配置文件nginx.conf指定的worker_rlinit_nofile设置的最大文件描述符个数时，
+		 * 出错返回；
+		 *
+		 * */
         if (ecf->connections > (ngx_uint_t) rlmt.rlim_cur
             && (ccf->rlimit_nofile == NGX_CONF_UNSET
                 || ecf->connections > (ngx_uint_t) ccf->rlimit_nofile))
@@ -515,10 +555,16 @@ ngx_event_module_init(ngx_cycle_t *cycle)
 #endif /* !(NGX_WIN32) */
 
 
+	/*
+	 * 模块ngx_core_module的master进程为0，表示不创建worker进程，
+	 * 则初始化到此结束，并成功返回
+	 *
+	 * */
     if (ccf->master == 0) {
         return NGX_OK;
     }
 
+	/*若master不为0，且存在负载均衡锁，则表示初始化完毕，并成功返回*/
     if (ngx_accept_mutex_ptr) {
         return NGX_OK;
     }
@@ -732,6 +778,7 @@ ngx_event_process_init(ngx_cycle_t *cycle)
 
 #endif
 
+	/* 预分配连接池 */
     cycle->connections =
         ngx_alloc(sizeof(ngx_connection_t) * cycle->connection_n, cycle->log);
     if (cycle->connections == NULL) {
@@ -740,6 +787,7 @@ ngx_event_process_init(ngx_cycle_t *cycle)
 
     c = cycle->connections;
 
+	/* 预分配读事件 */
     cycle->read_events = ngx_alloc(sizeof(ngx_event_t) * cycle->connection_n,
                                    cycle->log);
     if (cycle->read_events == NULL) {
@@ -749,6 +797,7 @@ ngx_event_process_init(ngx_cycle_t *cycle)
     rev = cycle->read_events;
     for (i = 0; i < cycle->connection_n; i++) {
         rev[i].closed = 1;
+		/* 过期标志位置1 */
         rev[i].instance = 1;
     }
 
