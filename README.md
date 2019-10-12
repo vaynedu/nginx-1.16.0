@@ -1,8 +1,9 @@
 
 nginx-1.16.0
 ====
-nginx-1.16.0源码分析及其注释--记录心路历程
+nginx-1.16.0源码分析及其注释--记录心路历程,目前正在认真学习nginx，有问题可以加QQ、邮箱1219345363@qq.com、issue都行，我会认真解答，一起学习[](https://github.com/vaynedu/nginx-1.16.0/blob/master/myrubbish/photo/qq.png)
 ----
+
 
 ## [一. myexercise--练习调试一些nginx的代码](https://github.com/lotluck/nginx-1.16.0/tree/master/myexercise)<br>
 ### [1.myngx_pool.c](https://github.com/lotluck/nginx-1.16.0/tree/master/myexercise/myngx_pool)<br>
