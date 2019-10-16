@@ -398,6 +398,7 @@ ngx_start_worker_processes(ngx_cycle_t *cycle, ngx_int_t n, ngx_int_t type)
         ch.slot = ngx_process_slot;
         ch.fd = ngx_processes[ngx_process_slot].channel[0];
 
+		/*ngx_pass_open_channel函数将存储了新子进程相关信息的结构体ch发送给其它子进程*/
         ngx_pass_open_channel(cycle, &ch);
     }
 }
@@ -458,7 +459,11 @@ ngx_start_cache_manager_processes(ngx_cycle_t *cycle, ngx_uint_t respawn)
     ngx_pass_open_channel(cycle, &ch);
 }
 
-
+/*
+ * ngx_pass_open_channel 函数
+ *
+ * 不断地把子进程的信息通过第i个子进程的channel[0]发送，当第i个进程接收到结构体ch（存储着新子进程的pid和channel信息）后，再进行相关处理即可
+ * */
 static void
 ngx_pass_open_channel(ngx_cycle_t *cycle, ngx_channel_t *ch)
 {
@@ -772,12 +777,21 @@ ngx_worker_process_cycle(ngx_cycle_t *cycle, void *data)
     ngx_process = NGX_PROCESS_WORKER;
     ngx_worker = worker;
 
-    ngx_worker_process_init(cycle, worker);
+	/*
+	 * nginx 的worker for循环进程中，获取不到getenv("PATH"), 因为ngx_set_environment重新设置获取环境变量,在ngx_worker_process_init函数后
+	 * 在获取环境变量就为空
+	 *
+	 * */
+	ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "11111111111111111111111111[%d]-child process start, %s\n", getpid(),getenv("PATH"));
 
-    ngx_setproctitle("worker process");
+	ngx_worker_process_init(cycle, worker);
+
+	ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "22222222222222222222222222[%d]-child process start \n", getpid(),getenv("PATH"));
+
+	ngx_setproctitle("worker process");
 
     for ( ;; ) {
-
+  
         if (ngx_exiting) {
             if (ngx_event_no_timers_left() == NGX_OK) {
                 ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "exiting");
@@ -835,6 +849,7 @@ ngx_worker_process_init(ngx_cycle_t *cycle, ngx_int_t worker)
     ngx_core_conf_t  *ccf;
     ngx_listening_t  *ls;
 
+	/* 设置环境变量，这里会导致后面worker进程获取不到getenv("PATH")的值*/
     if (ngx_set_environment(cycle, NULL) == NULL) {
         /* fatal */
         exit(2);
@@ -1014,6 +1029,7 @@ ngx_worker_process_init(ngx_cycle_t *cycle, ngx_int_t worker)
     ngx_last_process = 0;
 #endif
 
+	/*把自己从父进程继承的ngx_channel[1]（channel[0]被用于父进程或其它子进程写消息）加入到读事件监听集里*/
     if (ngx_add_channel_event(cycle, ngx_channel, NGX_READ_EVENT,
                               ngx_channel_handler)
         == NGX_ERROR)

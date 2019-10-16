@@ -13,11 +13,11 @@
 #include <ngx_core.h>
 
 
-#define NGX_CMD_OPEN_CHANNEL   1
-#define NGX_CMD_CLOSE_CHANNEL  2
-#define NGX_CMD_QUIT           3
-#define NGX_CMD_TERMINATE      4
-#define NGX_CMD_REOPEN         5
+#define NGX_CMD_OPEN_CHANNEL   1 /*新建或者发布一个通信管道*/
+#define NGX_CMD_CLOSE_CHANNEL  2 /*关闭一个通信管道*/
+#define NGX_CMD_QUIT           3 /*平滑退出*/
+#define NGX_CMD_TERMINATE      4 /*强制退出*/
+#define NGX_CMD_REOPEN         5 /*重新打开文件*/
 
 
 #define NGX_PROCESS_SINGLE     0
