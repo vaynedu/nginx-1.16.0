@@ -228,8 +228,8 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
 
 #endif
     }
-
-    if (ngx_use_accept_mutex) {
+    /*进程争抢锁的大致过程。首先判断进程负载情况，如果超载则不争抢，反之则去争抢锁资源*/
+    if (ngx_use_accept_mutex) { /*该标志主要是处理负载均衡的。如果大于0则跳过锁处理不争抢accept*/
         if (ngx_accept_disabled > 0) {
             ngx_accept_disabled--;
 
@@ -572,6 +572,14 @@ ngx_event_module_init(ngx_cycle_t *cycle)
 
     /* cl should be equal to or greater than cache line size */
 
+
+	/*
+	 * nginx有一些全局统计变量，比如说变量ngx_connection_counter，
+	 * 此类变量由所有worker进程共享，并发执行累加操作，由函数ngx_atomic_fetch_add实现；
+	 *
+	 * */
+
+
     cl = 128;
 
     size = cl            /* ngx_accept_mutex */
@@ -594,15 +602,18 @@ ngx_event_module_init(ngx_cycle_t *cycle)
     ngx_str_set(&shm.name, "nginx_shared_zone");
     shm.log = cycle->log;
 
+	/**/
     if (ngx_shm_alloc(&shm) != NGX_OK) {
         return NGX_ERROR;
     }
 
+    /*将一个mmap内存映射地址赋给锁的地址区域*/
     shared = shm.addr;
 
     ngx_accept_mutex_ptr = (ngx_atomic_t *) shared;
     ngx_accept_mutex.spin = (ngx_uint_t) -1;
 
+	/*将锁指针指向我们刚才映射的内存区域*/
     if (ngx_shmtx_create(&ngx_accept_mutex, (ngx_shmtx_sh_t *) shared,
                          cycle->lock_file.data)
         != NGX_OK)
