@@ -273,7 +273,9 @@ typedef uint32_t                    ngx_atomic_uint_t;
 typedef volatile ngx_atomic_uint_t  ngx_atomic_t;
 #define NGX_ATOMIC_T_LEN            (sizeof("-2147483648") - 1)
 
-
+/*
+ * 首先它比较 lock 地址处的变量是否等于 old， 如果相等，就把 lock 地址处的变量设为 set 变返回成功，否则返回失败
+ * 这个过程是作为一个原子一起进行的，不会被打断。*/
 static ngx_inline ngx_atomic_uint_t
 ngx_atomic_cmp_set(ngx_atomic_t *lock, ngx_atomic_uint_t old,
     ngx_atomic_uint_t set)
@@ -286,6 +288,12 @@ ngx_atomic_cmp_set(ngx_atomic_t *lock, ngx_atomic_uint_t old,
     return 0;
 }
 
+
+/*
+ * 读取 value 地址处的变量
+ * 其与 add 相加的结果再写入 *lock，然后返回原来 *lock 的值，这些操作也是作为一个整体完成的，不会被打断
+ *
+ * */
 
 static ngx_inline ngx_atomic_int_t
 ngx_atomic_fetch_add(ngx_atomic_t *value, ngx_atomic_int_t add)
