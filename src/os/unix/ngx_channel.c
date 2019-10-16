@@ -9,7 +9,21 @@
 #include <ngx_core.h>
 #include <ngx_channel.h>
 
+/*
+ * 两篇比较好的文章
+ *
+ * Nginx中的进程间通信
+ * https://pureage.info/2015/03/28/ipc-of-nginx.html
+ *
+ * 进程间传递文件描述符
+ * https://pureage.info/2015/03/19/passing-file-descriptors.html
+ */
 
+
+/*
+ * 向channel发送命令。
+ *
+ * */
 ngx_int_t
 ngx_write_channel(ngx_socket_t s, ngx_channel_t *ch, size_t size,
     ngx_log_t *log)
@@ -91,14 +105,33 @@ ngx_write_channel(ngx_socket_t s, ngx_channel_t *ch, size_t size,
     return NGX_OK;
 }
 
-
+/*
+ * 从channel中读取命令.
+ *
+ *
+ * */
 ngx_int_t
 ngx_read_channel(ngx_socket_t s, ngx_channel_t *ch, size_t size, ngx_log_t *log)
 {
     ssize_t             n;
     ngx_err_t           err;
-    struct iovec        iov[1];
-    struct msghdr       msg;
+    
+	/*
+	 * 它主要用于向一个socket发送消息，或从一个socket中接收消息。此处很重要的一个作用就是用在unix域中传递一个文件描述符
+	 *
+	 * Linux msghdr 和 cmsghdr 待了解?
+	 *
+	 * Nginx中的进程间通信
+	 * https://pureage.info/2015/03/28/ipc-of-nginx.html
+	 *
+	 * 进程间传递文件描述符
+	 * https://pureage.info/2015/03/19/passing-file-descriptors.html
+	 * */
+	struct iovec        iov[1];
+	struct msghdr       msg;
+
+
+
 
 #if (NGX_HAVE_MSGHDR_MSG_CONTROL)
     union {
@@ -194,7 +227,10 @@ ngx_read_channel(ngx_socket_t s, ngx_channel_t *ch, size_t size, ngx_log_t *log)
     return n;
 }
 
-
+/*
+ *  将相应的channel事件(读事件、写事件）加入到监听队列
+ *
+ * */
 ngx_int_t
 ngx_add_channel_event(ngx_cycle_t *cycle, ngx_fd_t fd, ngx_int_t event,
     ngx_event_handler_pt handler)
@@ -240,6 +276,10 @@ ngx_add_channel_event(ngx_cycle_t *cycle, ngx_fd_t fd, ngx_int_t event,
 }
 
 
+/*
+ * 关闭channel句柄
+ *
+ * */
 void
 ngx_close_channel(ngx_fd_t *fd, ngx_log_t *log)
 {

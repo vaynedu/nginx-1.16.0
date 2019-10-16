@@ -14,11 +14,12 @@
 #include <ngx_event.h>
 
 
+/*nginx master向channel[0]写数据时，worker可从channel[1]读数据*/
 typedef struct {
-    ngx_uint_t  command;
-    ngx_pid_t   pid;
-    ngx_int_t   slot;
-    ngx_fd_t    fd;
+    ngx_uint_t  command; /*发送的指令*/
+    ngx_pid_t   pid;     /*进程ID，一般为发送方进程的ID*/
+    ngx_int_t   slot;    /*一般为发送方在ngx_process数组中的序号*/
+    ngx_fd_t    fd;      /*通信的套接字句柄*/
 } ngx_channel_t;
 
 
