@@ -23,7 +23,7 @@ static ngx_uint_t  ngx_modules_n;
 
 /*
  * 初始化所有模块，并对所有模块进行编号处理
- *
+ * confgigure脚本执行完成后会生成objs/ngx_modules.c文件。ngx_modules就是在这个文件定义的
  */
 
 ngx_int_t
@@ -32,11 +32,13 @@ ngx_preinit_modules(void)
     ngx_uint_t  i;
 
     for (i = 0; ngx_modules[i]; i++) {
-        ngx_modules[i]->index = i;
-        ngx_modules[i]->name = ngx_module_names[i];
+        ngx_modules[i]->index = i;                   //设置模块编号
+        ngx_modules[i]->name = ngx_module_names[i];  // 设置模块名称
     }
 
-    ngx_modules_n = i;
+    ngx_modules_n = i;   // 模块总数
+
+	/*模块最大数量，含动态加载模块*/
     ngx_max_module = ngx_modules_n + NGX_MAX_DYNAMIC_MODULES;
 
     return NGX_OK;
