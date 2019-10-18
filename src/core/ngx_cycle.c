@@ -186,6 +186,10 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     ngx_queue_init(&cycle->reusable_connections_queue);
 
 
+	/*
+	 * 这段代码初始化了cycle的context，conf_ctx指向一段空间，每个地址存储void ＊的指针，
+	 * 这个指针能指向任何的一段空间，也就是各种conf结构体
+	 * */
     cycle->conf_ctx = ngx_pcalloc(pool, ngx_max_module * sizeof(void *));
     if (cycle->conf_ctx == NULL) {
         ngx_destroy_pool(pool);
@@ -227,13 +231,21 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
 
         module = cycle->modules[i]->ctx;
 
+		/* 只有定义了 NGX_DIRECT_CONF 指令的核心模块才需要设置 ctx->create_conf 函数！
+		 *
+		 * 为什么有些模块需要create_conf，有些不需要呢？
+		 * 根据配置文件动态分配内存, 简单来说就是节省内存
+		 *
+		 * */
+
+		/*nginx的核心模块通过设置ctx->create_conf函数指针来动态分配内存存储配置*/
         if (module->create_conf) {
-            rv = module->create_conf(cycle);
+            rv = module->create_conf(cycle);   //rv 是conf结构体首地址
             if (rv == NULL) {
                 ngx_destroy_pool(pool);
                 return NULL;
             }
-            cycle->conf_ctx[cycle->modules[i]->index] = rv;
+            cycle->conf_ctx[cycle->modules[i]->index] = rv;  //conf_ctx每个空间存储conf的首地址，构造了两层指针
         }
     }
 
