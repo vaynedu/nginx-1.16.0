@@ -354,12 +354,13 @@ ngx_trylock_accept_mutex(ngx_cycle_t *cycle)
             return NGX_OK;
         }
 
-		/*禁止accpet新的连接时，释放锁*/
+		/*获取锁成功,ngx_enable_accept_events将cycle->listening中的端口号都加到epoll事件中。把进程对应的监听socket 放入到epoll中进行监听，这样只有该进程能监听到accept操作*/
         if (ngx_enable_accept_events(cycle) == NGX_ERROR) {
             ngx_shmtx_unlock(&ngx_accept_mutex);
             return NGX_ERROR;
         }
 
+		/*设置获得锁的标记*/
         ngx_accept_events = 0;
         ngx_accept_mutex_held = 1;
 
@@ -371,6 +372,8 @@ ngx_trylock_accept_mutex(ngx_cycle_t *cycle)
 
 	/* 没有获取到锁时要将ngx_accept_mutex_held置为0 */
     if (ngx_accept_mutex_held) {
+		/*如果我们前面已经获得了锁，然后这次获得锁失败，则说明当前的listen句柄已经被其他的进程锁监听，
+		 *因此此时需要从epoll中移出调已经注册的listen句柄。这样就很好的控制了子进程的负载均衡*/
         if (ngx_disable_accept_events(cycle, 0) == NGX_ERROR) {
             return NGX_ERROR;
         }
