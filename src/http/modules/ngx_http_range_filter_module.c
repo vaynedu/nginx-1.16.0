@@ -486,7 +486,7 @@ ngx_http_range_singlepart_header(ngx_http_request_t *r,
  * > GET / HTTP/1.1
  * > User-Agent: curl/7.29.0
  * > Host: 123.206.25.239
- * > Accept: *\/*           // 请求与注释冲突，所以我增加了反 /
+ * > Accept: **           // 去掉了 / , 否则这种注释编译不过
  * > Range: bytes=0-50, 100-150
  * > 
  * < HTTP/1.1 206 Partial Content
