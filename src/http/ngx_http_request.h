@@ -60,11 +60,12 @@
 #define NGX_HTTP_PARSE_INVALID_HEADER      14
 
 
+/* nginx subrequest 的类型*/
 /* unused                                  1 */
-#define NGX_HTTP_SUBREQUEST_IN_MEMORY      2
-#define NGX_HTTP_SUBREQUEST_WAITED         4
-#define NGX_HTTP_SUBREQUEST_CLONE          8
-#define NGX_HTTP_SUBREQUEST_BACKGROUND     16
+#define NGX_HTTP_SUBREQUEST_IN_MEMORY      2  //请求在内存中执行
+#define NGX_HTTP_SUBREQUEST_WAITED         4  //阻塞延后处理
+#define NGX_HTTP_SUBREQUEST_CLONE          8  //完全拷贝主请求的处理行为
+#define NGX_HTTP_SUBREQUEST_BACKGROUND     16 //请求在"后台"执行 后面会详细介绍nginx"后台"处理的机制
 
 #define NGX_HTTP_LOG_UNSAFE                1
 
@@ -350,12 +351,21 @@ typedef struct {
 typedef struct ngx_http_postponed_request_s  ngx_http_postponed_request_t;
 
 struct ngx_http_postponed_request_s {
+	/*指向当前这个请求*/
     ngx_http_request_t               *request;
+
+	/*
+	 * 完成与后端服务器通信后，如果这个请求是不最前面的可以与客户端交互的请求，
+	 * 则这个请求产生的响应数据会缓存到out缓冲区中
+	 * */
     ngx_chain_t                      *out;
+
+	/*指向下一个子请求，构成一个链表*/
     ngx_http_postponed_request_t     *next;
 };
 
 
+//子请求链表节点
 typedef struct ngx_http_posted_request_s  ngx_http_posted_request_t;
 
 struct ngx_http_posted_request_s {
@@ -415,10 +425,15 @@ struct ngx_http_request_s {
     ngx_str_t                         schema;
 
     ngx_chain_t                      *out;
-    ngx_http_request_t               *main;
-    ngx_http_request_t               *parent;
-    ngx_http_postponed_request_t     *postponed;
+    ngx_http_request_t               *main;  
+    ngx_http_request_t               *parent;//如果是子请求则指向父请求，如果是父请求则为NULL
+    ngx_http_postponed_request_t     *postponed; //指向第一个子请求，构成一颗树结构
     ngx_http_post_subrequest_t       *post_subrequest;
+
+	/*
+	 * 这个指针只对原始请求有效，其它请求则会空。
+	 * 如果是原始请求，则指向第一个子请求链表节点
+	 * */
     ngx_http_posted_request_t        *posted_requests;
 
     ngx_int_t                         phase_handler;

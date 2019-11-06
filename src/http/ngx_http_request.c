@@ -2498,12 +2498,15 @@ ngx_http_request_handler(ngx_event_t *ev)
 }
 
 
+/*处理子请求，处理完后将从队列中删除*/
 void
 ngx_http_run_posted_requests(ngx_connection_t *c)
 {
     ngx_http_request_t         *r;
     ngx_http_posted_request_t  *pr;
 
+
+	/*循环处理所有子请求*/
     for ( ;; ) {
 
         if (c->destroyed) {
@@ -2517,6 +2520,7 @@ ngx_http_run_posted_requests(ngx_connection_t *c)
             return;
         }
 
+		/* 指向下一个子请求*/
         r->main->posted_requests = pr->next;
 
         r = pr->request;
@@ -2526,11 +2530,13 @@ ngx_http_run_posted_requests(ngx_connection_t *c)
         ngx_log_debug2(NGX_LOG_DEBUG_HTTP, c->log, 0,
                        "http posted request: \"%V?%V\"", &r->uri, &r->args);
 
+		//在函数ngx_http_handler设置为ngx_http_core_run_phases
         r->write_event_handler(r);
     }
 }
 
 
+//将子请求加入到原始请求链表的末尾。这样原始请求就知道了所有的子请求，包括孙子请求
 ngx_int_t
 ngx_http_post_request(ngx_http_request_t *r, ngx_http_posted_request_t *pr)
 {
@@ -2654,6 +2660,7 @@ ngx_http_finalize_request(ngx_http_request_t *r, ngx_int_t rc)
         return;
     }
 
+	// 判断是子请求
     if (r != r->main) {
         clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
 

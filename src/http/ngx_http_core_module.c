@@ -2383,7 +2383,9 @@ ngx_http_subrequest(ngx_http_request_t *r,
     sr->main = r->main;
     sr->parent = r;
     sr->post_subrequest = ps;
+	//子请求不跟客户端交互，因此不需要读取客户端事件
     sr->read_event_handler = ngx_http_request_empty_handler;
+    //调用各个http模块协同处理这个请求
     sr->write_event_handler = ngx_http_handler;
 
     sr->variables = r->variables;
@@ -2395,6 +2397,10 @@ ngx_http_subrequest(ngx_http_request_t *r,
     }
 
     if (!sr->background) {
+		/* 复用data存放最前面的请求，这个请求的数据可以直接发送给客户端。其它的子请求需要缓存数据，等待
+		 * 最前面的请求结束。如果r为子请求，r没有子请求了，且r为最前面的请求。则最前面的请求将会被切换为
+		 * 这个刚刚创建的r的子请求
+		 * */
         if (c->data == r && r->postponed == NULL) {
             c->data = sr;
         }
