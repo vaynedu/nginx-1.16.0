@@ -5,10 +5,29 @@
  */
 
 
+/*
+ *
+ * 流量copy模块.有点类似tcpcopy
+ *
+ *
+ * 代码和配置都很简单,详情请看https://github.com/vaynedu/nginx-1.16.0/issues/57
+ *
+ *
+ * */
+
+
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
 
+
+/* 配置
+ *
+ * mirror 可镜像多个location,所以是动态数组
+ *
+ * eg:  mirror /m1;
+ *      mirror /m2;
+ * */
 
 typedef struct {
     ngx_array_t  *mirror;
@@ -89,6 +108,7 @@ ngx_http_mirror_handler(ngx_http_request_t *r)
     ngx_http_mirror_ctx_t       *ctx;
     ngx_http_mirror_loc_conf_t  *mlcf;
 
+	// 如果是子请求,直接返回
     if (r != r->main) {
         return NGX_DECLINED;
     }
@@ -101,6 +121,7 @@ ngx_http_mirror_handler(ngx_http_request_t *r)
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0, "mirror handler");
 
+	// 一般镜像的时候都会直接丢掉包体,默认配置是off
     if (mlcf->request_body) {
         ctx = ngx_http_get_module_ctx(r, ngx_http_mirror_module);
 
@@ -141,11 +162,18 @@ ngx_http_mirror_body_handler(ngx_http_request_t *r)
 
     r->preserve_body = 1;
 
+	// 如果接受包体， 复制的镜像子请求直接走http的11个阶段
+
     r->write_event_handler = ngx_http_core_run_phases;
     ngx_http_core_run_phases(r);
 }
 
 
+
+/*
+ * ngx_http_mirror_handler_internal函数才是重中之重，ngx_http_subrequest生成子请求
+ *
+ * */
 static ngx_int_t
 ngx_http_mirror_handler_internal(ngx_http_request_t *r)
 {
@@ -245,6 +273,13 @@ ngx_http_mirror(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 
+
+/*该模块直接挂载在NGX_HTTP_PRECONTENT_PHASE阶段
+ *
+ *
+ * 该模块直接挂载在NGX_HTTP_PRECONTENT_PHASE阶段 这是内容生成前的一个阶段，此阶段已经通过访问控制，可以实现一些特殊的功能，例如请求镜像等
+ *
+ * */
 static ngx_int_t
 ngx_http_mirror_init(ngx_conf_t *cf)
 {
