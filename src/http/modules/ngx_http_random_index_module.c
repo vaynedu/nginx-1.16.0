@@ -10,6 +10,15 @@
 #include <ngx_http.h>
 
 
+/*
+ * http_random_index_module 模块
+ *
+ * 在目录中随机选择一个主页
+ *
+ * 特别简单的一个模块,我怎么感觉这个模块用处不大呢, 
+ *
+ * */
+
 typedef struct {
     ngx_flag_t  enable;
 } ngx_http_random_index_loc_conf_t;
@@ -27,6 +36,16 @@ static char *ngx_http_random_index_merge_loc_conf(ngx_conf_t *cf,
 
 
 static ngx_command_t  ngx_http_random_index_commands[] = {
+
+    /*
+	 * 使用方法
+	 *
+	 * location / {
+	 *     random_index on;
+	 *     #index 1.html 2.html 3.html
+	 *  }
+	 *
+	 * */
 
     { ngx_string("random_index"),
       NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
@@ -306,6 +325,7 @@ ngx_http_random_index_init(ngx_conf_t *cf)
 
     cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
 
+	// 该模块被挂载在NGX_HTTP_CONTENT_PHASE阶段
     h = ngx_array_push(&cmcf->phases[NGX_HTTP_CONTENT_PHASE].handlers);
     if (h == NULL) {
         return NGX_ERROR;
