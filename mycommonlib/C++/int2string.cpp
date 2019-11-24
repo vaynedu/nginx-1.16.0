@@ -3,7 +3,7 @@
 #include <stdint.h> // for int64_t
 #include <string>   // for string
 #include <stdlib.h> // for strtol
-
+#include <inttypes.h>
 
 /*
  *  目前只实现了C++的int2str转化，稍后会完善C语言的int2str
@@ -22,7 +22,7 @@ static  inline  std::string int2string(int64_t v)
     int ret = -1;
     char buf[32] = {'\0'};
 
-    ret = snprintf(buf, sizeof(buf), "%lld" , v);
+    ret = snprintf(buf, sizeof(buf), "%"PRId64"\n" , v);
     if(ret < 0 || ret >= sizeof(buf))
     {
        return std::string("");
@@ -56,7 +56,6 @@ int main()
 
    int64_t v = string2int("  -324299099");
    std::cout <<v << std::endl;
-
 
    return 0;
 }
