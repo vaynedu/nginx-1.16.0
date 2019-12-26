@@ -8,6 +8,9 @@ using namespace std;
 
 int main()
 {
+
+    // md5
+
     unsigned char  md5[16];
     Utility::get_md5("1234", strlen("1234"), md5);
 
@@ -30,6 +33,33 @@ int main()
     Utility::hex_to_md5(str.c_str(), str.size(),md5_1, sizeof(md5_1));
     string hex3 = Utility::md5_to_hex(md5_1,sizeof(md5_1));
     cout << hex3 << endl; //81dc9bdb52d04dc20036dbd8313ed055
+
+
+    //ip
+    uint32_t eth1 = Utility::get_networkcard_ip("eth1");
+    cout << "eth1 :" << ntohl(eth1) << endl; //主机
+    cout << Utility::inet_n2p_ipv4(eth1) << endl;
+
+    cout << Utility::inet_p2n_ipv4("127.0.0.1") << endl;  //16777343, 网络序
+
+    cout << Utility::inet_n2p_ipv4(16777343) << endl;
+
+    // 主机序
+    uint32_t ipv4 = Utility::ipv4_to_uint32("127.0.0.1");
+    cout << "127.0.0.1 : " << ipv4 << endl;
+    cout << ipv4 << " " <<  Utility::uint32_to_ipv4(ipv4) << endl;
+
+
+
+    //url相关操作
+
+    map<int, string> url_path;
+    Utility::get_urlpath_slashsplit(url_path, "/aaaaa/bbb/cccc.mp4");
+    for(const auto& item:url_path){
+        cout <<item.first << " : " << item.second << endl;
+    }
+
+
 
 
     return 0;

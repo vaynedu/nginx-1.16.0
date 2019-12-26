@@ -108,7 +108,6 @@ int  Utility::hex_to_md5(const  char *data, unsigned len, unsigned char *md5, un
         if(x < 0 || x > 16 || y < 0 || y > 16) return -2;
 
         int  m = x * 16  + y;
-
         md5[j++] = m;
     }
 
@@ -124,6 +123,239 @@ void Utility::md5_to_upper(string &s) {
     if(s.empty()) return;
     transform(s.begin(), s.end(), s.begin(), (int (*)(int))toupper);
 }
+
+uint32_t Utility::get_networkcard_ip(const char *ifname) {
+    if(!ifname)  return 0;
+
+    register int fd, intrface;
+    struct ifreq buf[10];
+    struct ifconf ifc;
+    unsigned ip = 0;
+
+    if((fd = socket(AF_INET, SOCK_DGRAM, 0)) >= 0)
+    {
+        ifc.ifc_len = sizeof(buf);
+        ifc.ifc_buf = (caddr_t)buf;
+        if(!ioctl(fd, SIOCGIFCONF, (char*)&ifc))
+        {
+            intrface = ifc.ifc_len / sizeof(struct ifreq);
+            while(intrface-- > 0)
+            {
+                if(strcmp(buf[intrface].ifr_name, ifname) == 0)
+                {
+                    if(!(ioctl(fd, SIOCGIFADDR, (char *)&buf[intrface])))
+                        ip = (unsigned)((struct sockaddr_in *)(&buf[intrface].ifr_addr))->sin_addr.s_addr;
+                    break;
+                }
+            }
+        }
+        close(fd);
+    }
+
+
+    return ip;
+}
+
+uint32_t Utility::inet_p2n_ipv4(const char *ip_addr) {
+    if(ip_addr == nullptr) return 0;
+
+    // 这里直接处理返回的网络序，即是大端，
+    struct in_addr in = {0};
+    if(inet_pton(AF_INET, ip_addr, &in) > 0){
+        return in.s_addr;
+    } else {
+        return 0;
+    }
+
+}
+
+string Utility::inet_n2p_ipv4(uint32_t ipv4) {
+    if(ipv4 == 0) return "0.0.0.0";
+
+    static char buf[INET_ADDRSTRLEN] = {0};
+    struct in_addr in;
+    in.s_addr = ipv4;
+
+    if(inet_ntop(AF_INET, &in, buf, sizeof(buf))){
+        return string(buf);
+    } else {
+        return "";
+    }
+}
+
+uint32_t Utility::ipv4_to_uint32(const char *ip_addr) {
+    if(ip_addr == nullptr) return 0;
+
+    // 另外一种思路可以使用sscanf和snprintf实现, 这里不使用，直接复用上面逻辑
+    // sscanf(ip_str, "%d.%d.%d.%d", &ip[0], &ip[1], &ip[2], &ip[3]);
+    // sprintf(str, "%u.%u.%u.%u", c[3], c[2], c[1], c[0]);
+
+    return ntohl(inet_p2n_ipv4(ip_addr));
+}
+
+string Utility::uint32_to_ipv4(uint32_t ipv4) {
+    if(ipv4 == 0) return "0.0.0.0";
+
+    return inet_n2p_ipv4(htonl(ipv4));
+}
+
+void Utility::split_v1(const string &str, vector<string> &v,  const char delims) {
+    v.clear();
+
+    int curr = 0;
+    int last = 0;
+    int str_size = str.length();
+
+    while(curr < str_size){
+        if(str[curr] == delims){
+            if(curr - last > 0){
+                v.push_back(str.substr(last, curr - last));
+            }
+            /*记录curr的下一个位置， 跳过delims*/
+            last = curr + 1;
+        }
+        ++curr;
+    }
+
+    if(curr - last > 0){
+        v.push_back(str.substr(last, curr -last));
+    }
+}
+
+void Utility::split_v2(const string &str, vector<string> &v, const string& delims) {
+    v.clear();
+
+    int curr = 0;
+    int last = 0;
+    int str_size = str.length();
+
+    while(curr < str_size){
+        if(delims.find(str[curr]) != string::npos){
+            if(curr - last > 0){
+                v.push_back(str.substr(last, curr - last));
+            }
+            last = curr + 1;
+        }
+        ++curr;
+    }
+
+    if(curr - last > 0){
+        v.push_back(str.substr(last, curr-last));
+    }
+
+}
+
+string Utility::trim_string(const string &str, const char *delims) {
+    if(str.empty()) return "";
+    if(delims == nullptr) return str;
+
+    string::size_type start_pos = str.find_first_not_of(delims);
+    string::size_type end_pos   = str.find_last_not_of(delims);
+
+    string::const_iterator s = (start_pos == string::npos) ? str.begin() : (str.begin() + start_pos);
+    string::const_iterator e = (end_pos == string::npos) ? str.end() : (str.end() + 1);
+
+    return string(s, e);
+}
+
+void Utility::delete_all_space(string &s, const string &mark) {
+    string::size_type nSize = mark.size();
+    while(true){
+        string::size_type pos = s.find(mark);
+        if(pos == string::npos){
+            return;
+        }
+        s = s.erase(pos, nSize);
+    }
+}
+
+int Utility::get_url_args(map<string, string> &url_args, const string &url_params) {
+    if(url_params.empty())  return -1;
+
+    url_args.clear();
+
+    string key;
+    string val;
+
+    size_t last_pos = 0;
+    size_t amp_pos = 0;  /* & == amp;*/
+    size_t equal_pos = 0;
+
+    while( (equal_pos =  url_params.find('=', last_pos)) != string::npos ){
+        amp_pos = url_params.find('&',last_pos);
+        if(amp_pos == string::npos){
+            amp_pos = url_params.length();
+        }
+
+        key = url_params.substr(last_pos, equal_pos - last_pos);
+        val = url_params.substr(equal_pos + 1,  amp_pos - (equal_pos + 1));
+
+        url_args[key] = val;
+
+        last_pos = amp_pos + 1;
+
+        if(last_pos >= url_params.length()){
+            break;
+        }
+    }
+    return 0;
+}
+
+int Utility::get_domain(const string &url, string &domain, bool is_http) {
+    if(url.empty())  return -1;
+
+
+    domain = "";
+    const string http  = "http://";
+    const string https = "https://";
+
+    if(url.find(http) != string::npos || url.find(https) != string::npos){
+        string::size_type start_pos  = is_http ? http.length() : https.length();
+        string::size_type end_pos = url.find("/", start_pos);
+        if(end_pos != string::npos){
+            domain = url.substr(start_pos, end_pos - start_pos);
+        } else {
+            domain = url.substr(start_pos);
+        }
+    }
+
+    return 0;
+}
+
+int Utility::get_file_type(const string &file_name, string &file_type) {
+    if(file_name.empty())  return -1;
+
+    size_t pos = file_name.rfind(".");
+    if(pos != string::npos){
+        //	file_type = file_name.substr(pos + 1, file_name.length() - pos - 1);
+        file_type = file_name.substr(pos + 1);
+    }
+
+    return 0;
+}
+
+int Utility::get_urlpath_slashsplit(map<int, string> &url_path, const string &url) {
+    if(url.empty()) return -1;
+    url_path.clear();
+
+    /*
+     *  url 的格式 /a/b/c/d, 以/进行划分
+     */
+
+    int i = 1;
+    vector<string> v;
+    split_v1(url, v, '/');
+    if(v.empty()) return -2;
+
+    for(const auto& item:v){
+        url_path[i++] = item;
+    }
+
+    return 0;
+}
+
+
+
 
 
 
