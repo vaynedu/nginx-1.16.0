@@ -123,9 +123,11 @@ public:
 public:
     static string int2str(int64_t v);
     static int64_t str2int(const string &s);
-
     static string int2str_v2(int64_t v);
     static int64_t str2int_v2(const string &s);
+    static string mem2hex(const unsigned char *data, unsigned len);
+    static string hex2mem(const char *data, unsigned len);
+
 
 
 };

@@ -491,6 +491,34 @@ int64_t Utility::str2int_v2(const string &s) {
     return std::stoll(s, nullptr, 10);
 }
 
+string Utility::mem2hex(const unsigned char *data, unsigned len) {
+    if (data == nullptr || len < = 0) return "";
+
+    string str = "";
+    char buf[3] = {0};
+    for (unsigned i = 0; i < len; i++) {
+        unsigned char c = data[i];
+        buf[0] = hex_tower[c / 16];
+        buf[1] = hex_tower[c % 16];
+        str += buf;
+    }
+
+    return str;
+}
+
+string Utility::hex2mem(const char *data, unsigned len) {
+    if(data == nullptr || len % 2 != 0)  return "";
+
+    string str;
+    char buf[3] = {0};
+    for(unsigned i = 0; i < len / 2; i++){
+        memcpy(buf, data + 2 * i, 2);
+        buf[2] = '\0';
+        str.push_back((char)strol(buf, NULL, 16));
+    }
+    return str;
+}
+
 
 
 
