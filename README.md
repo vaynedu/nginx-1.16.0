@@ -88,8 +88,6 @@ nginx-1.16.0源码分析及其注释--记录心路历程，有问题随时沟通
 
 
 ## 八.联系方式
-### 1.1219345363@qq.com
-### [2.github issue](https://github.com/vaynedu/nginx-1.16.0/issues)
-### 3.QQ二维码
-![3.QQ二维码](https://github.com/vaynedu/nginx-1.16.0/blob/master/myrubbish/photo/qq.png)
+### [1.github issue](https://github.com/vaynedu/nginx-1.16.0/issues)
+### 2.QQ二维码
 
